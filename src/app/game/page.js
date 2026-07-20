@@ -113,9 +113,9 @@ export function DecryptionGameContent() {
       try {
         const res = await catsService.getPlacements();
         const placements = res?.data || res || [];
-        const nextSlots = [null, null, null, null, null, null];
+        const nextSlots = Array(48).fill(null);
         placements.forEach((p) => {
-          if (p.slotIndex >= 0 && p.slotIndex < 6) {
+          if (p.slotIndex >= 0 && p.slotIndex < 48) {
             nextSlots[p.slotIndex] = p.cat;
           }
         });
@@ -697,8 +697,8 @@ export function DecryptionGameContent() {
     setGameStatus("idle");
     setIsGameActive(false);
     setCurrentOutput(["", "", "", "", "", ""]);
-    setDeployedCats([null, null, null, null, null, null]);
-    setAccumulatedSp([0, 0, 0, 0, 0, 0]);
+    setDeployedCats(Array(48).fill(null));
+    setAccumulatedSp(Array(48).fill(0));
     setInventory(catPool);
     setSpPoints(0);
     setCandyProgress(10);
