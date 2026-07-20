@@ -676,7 +676,7 @@ export default function ServerRoomMap({
             const playerCenterY = playerPos.y + playerSize / 2;
             let nearSlotIdx = -1;
             let minDistance = Infinity;
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < 48; i++) {
               const center = getDeskCenter(i);
               const dist = Math.hypot(playerCenterX - center.x, playerCenterY - center.y);
               if (dist < 80 && dist < minDistance) {
