@@ -9,6 +9,26 @@ export const mapService = {
     return await api.get("/api/maps/all");
   },
   
+  getRooms: async () => {
+    return await api.get("/api/maps/rooms");
+  },
+  
+  createRoomInstance: async (name, mapId) => {
+    return await api.post("/api/maps/rooms", { name, mapId });
+  },
+
+  updateRoomInstance: async (id, name, mapId) => {
+    return await api.put(`/api/maps/rooms/${id}`, { name, mapId });
+  },
+  
+  deleteRoomInstance: async (id) => {
+    return await api.delete(`/api/maps/rooms/${id}`);
+  },
+  
+  createRoom: async (name) => {
+    return await api.post("/api/maps/create", { name });
+  },
+  
   saveMap: async (mapData) => {
     return await api.post("/api/maps", mapData);
   },
