@@ -247,6 +247,14 @@ export default function ServerRoomMap({
                 [data.id]: { ...prev[data.id], x: data.x, y: data.y }
               };
             });
+          } else if (data.type === "player_held_cat_updated") {
+            setOtherPlayers(prev => {
+              if (!prev[data.id]) return prev;
+              return {
+                ...prev,
+                [data.id]: { ...prev[data.id], heldCat: data.heldCat }
+              };
+            });
           } else if (data.type === "player_left") {
             setOtherPlayers(prev => {
               const next = { ...prev };
@@ -305,6 +313,17 @@ export default function ServerRoomMap({
       })
     );
   }, [deployedCats, myAssignedSlotIndex]);
+
+  // Sync heldCat to WS server whenever it changes
+  useEffect(() => {
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
+    socketRef.current.send(
+      JSON.stringify({
+        type: "update_held_cat",
+        heldCat: heldCat
+      })
+    );
+  }, [heldCat]);
 
   // Handle mouse scroll wheel zoom
   useEffect(() => {
@@ -742,17 +761,26 @@ export default function ServerRoomMap({
               className="absolute transition-all duration-75 ease-out select-none z-10 flex flex-col items-center"
               style={{
                 left: p.x,
-                top: p.y,
+                top: p.y - (p.heldCat ? 30 : 0),
                 width: playerSize,
-                height: playerSize,
+                height: playerSize + (p.heldCat ? 30 : 0),
               }}
             >
+              {p.heldCat && (
+                <div className="absolute -top-16 flex flex-col items-center animate-bounce">
+                  <img 
+                    src={p.heldCat.image || `/cats/cat-${p.heldCat.rarity.toLowerCase()}.png`} 
+                    alt="Held Cat" 
+                    className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+                  />
+                </div>
+              )}
               <div className="absolute -top-6 flex flex-col items-center">
                 <span className="text-[8px] bg-black/85 text-blue-300 px-2 py-0.5 rounded-full mb-0.5 whitespace-nowrap border border-blue-900/55 font-mono font-bold drop-shadow-md">
                   {p.username}
                 </span>
               </div>
-              <img src="/mc-00.png" alt={p.username} className="w-14 h-14 object-contain drop-shadow-[0_0_8px_rgba(59,130,246,0.45)] opacity-80" />
+              <img src="/mc-00.png" alt={p.username} className="w-14 h-14 object-contain drop-shadow-[0_0_8px_rgba(59,130,246,0.45)] mt-auto opacity-80" />
             </div>
           ))}
         </div>
