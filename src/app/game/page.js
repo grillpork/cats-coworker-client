@@ -107,7 +107,7 @@ export function DecryptionGameContent() {
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
 
-  // Load deployed cats from database on mount if authenticated
+  // Load deployed cats from database on mount if authenticated and assigned zone is loaded
   useEffect(() => {
     const loadPlacements = async () => {
       try {
@@ -115,8 +115,10 @@ export function DecryptionGameContent() {
         const placements = res?.data || res || [];
         const nextSlots = Array(48).fill(null);
         placements.forEach((p) => {
-          if (p.slotIndex >= 0 && p.slotIndex < 48) {
-            nextSlots[p.slotIndex] = p.cat;
+          // Convert database 0-7 relative slotIndex to global slotIndex (0 to 47)
+          const globalIdx = myAssignedSlotIndex * 8 + (p.slotIndex % 8);
+          if (globalIdx >= 0 && globalIdx < 48) {
+            nextSlots[globalIdx] = p.cat;
           }
         });
         setDeployedCats(nextSlots);
@@ -130,7 +132,7 @@ export function DecryptionGameContent() {
     } else {
       setDeployedCats(Array(48).fill(null));
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, myAssignedSlotIndex]);
 
 
 
@@ -175,6 +177,7 @@ export function DecryptionGameContent() {
   const [spPoints, setSpPoints] = useState(0);
   const [deployedCats, setDeployedCats] = useState(Array(48).fill(null));
   const [accumulatedSp, setAccumulatedSp] = useState(Array(48).fill(0));
+  const [myAssignedSlotIndex, setMyAssignedSlotIndex] = useState(0);
   const [inventory, setInventory] = useState([]);
   const [catPool, setCatPool] = useState([]);
   const [heldCat, setHeldCat] = useState(null);
@@ -404,7 +407,8 @@ export function DecryptionGameContent() {
 
     if (isAuthenticated) {
       try {
-        await catsService.placeCat(catToPlace, slotIdx);
+        const relativeIdx = slotIdx % 8;
+        await catsService.placeCat(catToPlace, relativeIdx);
       } catch (error) {
         console.error("Failed to save cat placement:", error);
       }
@@ -432,7 +436,8 @@ export function DecryptionGameContent() {
 
     if (isAuthenticated) {
       try {
-        await catsService.pickupCat(slotIdx);
+        const relativeIdx = slotIdx % 8;
+        await catsService.pickupCat(relativeIdx);
       } catch (error) {
         console.error("Failed to remove cat placement:", error);
       }
@@ -464,7 +469,8 @@ export function DecryptionGameContent() {
 
       if (isAuthenticated) {
         try {
-          await catsService.placeCat(oldHeldCat, slotIdx);
+          const relativeIdx = slotIdx % 8;
+          await catsService.placeCat(oldHeldCat, relativeIdx);
         } catch (error) {
           console.error("Failed to swap cat placement:", error);
         }
@@ -486,7 +492,8 @@ export function DecryptionGameContent() {
 
       if (isAuthenticated) {
         try {
-          await catsService.pickupCat(slotIdx);
+          const relativeIdx = slotIdx % 8;
+          await catsService.pickupCat(relativeIdx);
         } catch (error) {
           console.error("Failed to pickup cat placement:", error);
         }
@@ -807,6 +814,8 @@ export function DecryptionGameContent() {
         onCatPlacedRemote={handleCatPlacedRemote}
         onCatRemovedRemote={handleCatRemovedRemote}
         onCatUpgradedRemote={handleCatUpgradedRemote}
+        myAssignedSlotIndex={myAssignedSlotIndex}
+        setMyAssignedSlotIndex={setMyAssignedSlotIndex}
       />
 
       {/* 2.5. Floating Top-Right User & Utility Panel (z-40) */}

@@ -86,10 +86,11 @@ export default function ServerRoomMap({
   onCatRemovedRemote,
   onCatUpgradedRemote,
   wsSendRef,
+  myAssignedSlotIndex,
+  setMyAssignedSlotIndex,
 }) {
   const [dimensions, setDimensions] = useState({ width: 1680, height: 1104 });
   const [zoom, setZoom] = useState(1.0);
-  const [myAssignedSlotIndex, setMyAssignedSlotIndex] = useState(0);
   const playerSize = 48;
   const coinSize = 24;
 
