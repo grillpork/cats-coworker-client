@@ -164,102 +164,121 @@ export default function ServerRoomMap({
 
   // WebSocket connection for real-time multiplayer
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:4000";
-    const ws = new WebSocket(wsUrl);
-    socketRef.current = ws;
-
-    ws.onopen = () => {
-      console.log("Connected to Server Room Gateway WS");
-      const currentRoomName = room || "Server Room A";
-      if (user && user.id) {
-        ws.send(
-          JSON.stringify({
-            type: "join",
-            user: {
-              id: user.id,
-              username: user.username || user.email?.split("@")[0] || `User-${user.id}`,
-            },
-            room: currentRoomName,
-            x: playerPos.x,
-            y: playerPos.y
-          })
-        );
-      }
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "joined_room") {
-          if (data.slotIndex !== undefined) {
-            setMyAssignedSlotIndex(data.slotIndex);
-          }
-          const initial = {};
-          (data.players || []).forEach(p => {
-            initial[p.id] = p;
-          });
-          setOtherPlayers(initial);
-
-          if (data.roomCats && onRoomCatsSync) {
-            onRoomCatsSync(data.roomCats);
-          }
-        } else if (data.type === "room_full") {
-          alert("❌ " + (data.reason || "ห้องเซิร์ฟเวอร์นี้เต็มแล้ว (จำกัด 6 คน)"));
-          window.location.href = "/";
-        } else if (data.type === "players_list") {
-          const initial = {};
-          data.players.forEach(p => {
-            initial[p.id] = p;
-          });
-          setOtherPlayers(initial);
-        } else if (data.type === "player_joined") {
-          setOtherPlayers(prev => ({
-            ...prev,
-            [data.player.id]: data.player
-          }));
-        } else if (data.type === "player_moved") {
-          setOtherPlayers(prev => {
-            if (!prev[data.id]) return prev;
-            return {
-              ...prev,
-              [data.id]: { ...prev[data.id], x: data.x, y: data.y }
-            };
-          });
-        } else if (data.type === "player_left") {
-          setOtherPlayers(prev => {
-            const next = { ...prev };
-            delete next[data.id];
-            return next;
-          });
-        } else if (data.type === "sync_cats") {
-          if (data.roomCats && onRoomCatsSync) {
-            onRoomCatsSync(data.roomCats);
-          }
-        } else if (data.type === "cat_placed") {
-          if (onCatPlacedRemote) {
-            onCatPlacedRemote(data.slotIndex, data.cat);
-          }
-        } else if (data.type === "cat_removed") {
-          if (onCatRemovedRemote) {
-            onCatRemovedRemote(data.slotIndex);
-          }
-        } else if (data.type === "cat_upgraded") {
-          if (onCatUpgradedRemote) {
-            onCatUpgradedRemote(data.slotIndex, data.cat);
-          }
-        } else if (data.type === "announcement") {
-          alert(`📢 ประกาศจากระบบ:\n\n${data.message}`);
-        } else if (data.type === "kicked") {
-          alert("❌ คุณถูกเตะออกจาก Server Room โดยผู้ดูแลระบบ");
-          window.location.reload();
+    let ws;
+    try {
+      const getWsUrl = () => {
+        if (process.env.NEXT_PUBLIC_WS_URL) {
+          return process.env.NEXT_PUBLIC_WS_URL;
         }
-      } catch (err) {
-        console.error("WS Client Error:", err);
-      }
-    };
+        if (typeof window !== "undefined") {
+          const isHttps = window.location.protocol === "https:";
+          const isProd = window.location.hostname === "catako.site";
+          if (isProd || isHttps) {
+            return "wss://backend-catako.site";
+          }
+        }
+        return "ws://localhost:4000";
+      };
+
+      const wsUrl = getWsUrl();
+      ws = new WebSocket(wsUrl);
+      socketRef.current = ws;
+
+      ws.onopen = () => {
+        console.log("Connected to Server Room Gateway WS:", wsUrl);
+        const currentRoomName = room || "Server Room A";
+        if (user && user.id) {
+          ws.send(
+            JSON.stringify({
+              type: "join",
+              user: {
+                id: user.id,
+                username: user.username || user.email?.split("@")[0] || `User-${user.id}`,
+              },
+              room: currentRoomName,
+              x: playerPos.x,
+              y: playerPos.y
+            })
+          );
+        }
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "joined_room") {
+            if (data.slotIndex !== undefined) {
+              setMyAssignedSlotIndex(data.slotIndex);
+            }
+            const initial = {};
+            (data.players || []).forEach(p => {
+              initial[p.id] = p;
+            });
+            setOtherPlayers(initial);
+
+            if (data.roomCats && onRoomCatsSync) {
+              onRoomCatsSync(data.roomCats);
+            }
+          } else if (data.type === "room_full") {
+            alert("❌ " + (data.reason || "ห้องเซิร์ฟเวอร์นี้เต็มแล้ว (จำกัด 6 คน)"));
+            window.location.href = "/";
+          } else if (data.type === "players_list") {
+            const initial = {};
+            data.players.forEach(p => {
+              initial[p.id] = p;
+            });
+            setOtherPlayers(initial);
+          } else if (data.type === "player_joined") {
+            setOtherPlayers(prev => ({
+              ...prev,
+              [data.player.id]: data.player
+            }));
+          } else if (data.type === "player_moved") {
+            setOtherPlayers(prev => {
+              if (!prev[data.id]) return prev;
+              return {
+                ...prev,
+                [data.id]: { ...prev[data.id], x: data.x, y: data.y }
+              };
+            });
+          } else if (data.type === "player_left") {
+            setOtherPlayers(prev => {
+              const next = { ...prev };
+              delete next[data.id];
+              return next;
+            });
+          } else if (data.type === "sync_cats") {
+            if (data.roomCats && onRoomCatsSync) {
+              onRoomCatsSync(data.roomCats);
+            }
+          } else if (data.type === "cat_placed") {
+            if (onCatPlacedRemote) {
+              onCatPlacedRemote(data.slotIndex, data.cat);
+            }
+          } else if (data.type === "cat_removed") {
+            if (onCatRemovedRemote) {
+              onCatRemovedRemote(data.slotIndex);
+            }
+          } else if (data.type === "cat_upgraded") {
+            if (onCatUpgradedRemote) {
+              onCatUpgradedRemote(data.slotIndex, data.cat);
+            }
+          } else if (data.type === "announcement") {
+            alert(`📢 ประกาศจากระบบ:\n\n${data.message}`);
+          } else if (data.type === "kicked") {
+            alert("❌ คุณถูกเตะออกจาก Server Room โดยผู้ดูแลระบบ");
+            window.location.reload();
+          }
+        } catch (msgErr) {
+          console.error("WS Message Parsing Error:", msgErr);
+        }
+      };
+    } catch (wsErr) {
+      console.error("Failed to initialize WebSocket connection:", wsErr);
+    }
 
     return () => {
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         ws.close();
       }
     };
