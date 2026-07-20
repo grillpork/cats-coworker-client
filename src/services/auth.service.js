@@ -29,6 +29,14 @@ export const authServices = {
         })
         return res
     },
+    googleAuth: async (payload) => {
+        const res = await api.post('/api/auth/google', payload);
+        return res;
+    },
+    oauthLogin: async (payload) => {
+        const res = await api.post('/api/auth/oauth', payload);
+        return res;
+    },
     getAllUsers: async () => {
         const res = await api.get('/api/user/all');
         return res;

@@ -336,6 +336,47 @@ export function DecryptionGameContent() {
     ]);
   };
 
+  // Ref to emit WebSocket messages from game page
+  const wsSendRef = useRef(null);
+
+  const handleRoomCatsSync = useCallback((roomCats) => {
+    if (!roomCats) return;
+    setDeployedCats((prev) => {
+      const next = [...prev];
+      Object.entries(roomCats).forEach(([slotIdxStr, cat]) => {
+        const idx = parseInt(slotIdxStr, 10);
+        if (idx >= 0 && idx < 48) {
+          next[idx] = cat;
+        }
+      });
+      return next;
+    });
+  }, []);
+
+  const handleCatPlacedRemote = useCallback((slotIdx, cat) => {
+    setDeployedCats((prev) => {
+      const next = [...prev];
+      next[slotIdx] = cat;
+      return next;
+    });
+  }, []);
+
+  const handleCatRemovedRemote = useCallback((slotIdx) => {
+    setDeployedCats((prev) => {
+      const next = [...prev];
+      next[slotIdx] = null;
+      return next;
+    });
+  }, []);
+
+  const handleCatUpgradedRemote = useCallback((slotIdx, cat) => {
+    setDeployedCats((prev) => {
+      const next = [...prev];
+      next[slotIdx] = cat;
+      return next;
+    });
+  }, []);
+
   // Place held cat on a desk
   const handlePlaceCat = async (slotIdx) => {
     if (!heldCat) return;
@@ -346,6 +387,15 @@ export function DecryptionGameContent() {
     const catToPlace = heldCat;
     setHeldCat(null);
     playSoundEffect("place");
+
+    // Broadcast placement to WebSocket server
+    if (wsSendRef.current) {
+      wsSendRef.current({
+        type: "cat_placed",
+        slotIndex: slotIdx,
+        cat: catToPlace
+      });
+    }
 
     setConsoleHistory((prev) => [
       ...prev,
@@ -369,6 +419,10 @@ export function DecryptionGameContent() {
     const nextSlots = [...deployedCats];
     nextSlots[slotIdx] = null;
     setDeployedCats(nextSlots);
+
+    if (wsSendRef.current) {
+      wsSendRef.current({ type: "cat_removed", slotIndex: slotIdx });
+    }
 
     setInventory([...inventory, cat]);
     setConsoleHistory((prev) => [
@@ -398,6 +452,11 @@ export function DecryptionGameContent() {
       setHeldCat(cat);
       setDeployedCats(nextSlots);
       playSoundEffect("pickup");
+
+      if (wsSendRef.current) {
+        wsSendRef.current({ type: "cat_placed", slotIndex: slotIdx, cat: oldHeldCat });
+      }
+
       setConsoleHistory((prev) => [
         ...prev,
         { type: "sys", text: `Swapped. Now holding ${cat.name}.` }
@@ -415,6 +474,11 @@ export function DecryptionGameContent() {
       setHeldCat(cat);
       setDeployedCats(nextSlots);
       playSoundEffect("pickup");
+
+      if (wsSendRef.current) {
+        wsSendRef.current({ type: "cat_removed", slotIndex: slotIdx });
+      }
+
       setConsoleHistory((prev) => [
         ...prev,
         { type: "sys", text: `Picked up ${cat.name} to head.` }
@@ -461,16 +525,22 @@ export function DecryptionGameContent() {
     const cost = level * 100;
     if (spPoints < cost) return;
 
+    const updatedCat = {
+      ...cat,
+      level: level + 1,
+      spRate: cat.spRate + 2,
+    };
+
     setSpPoints((prev) => prev - cost);
     setDeployedCats((prev) => {
       const next = [...prev];
-      next[slotIdx] = {
-        ...cat,
-        level: level + 1,
-        spRate: cat.spRate + 2,
-      };
+      next[slotIdx] = updatedCat;
       return next;
     });
+
+    if (wsSendRef.current) {
+      wsSendRef.current({ type: "cat_upgraded", slotIndex: slotIdx, cat: updatedCat });
+    }
 
     setConsoleHistory((prev) => [
       ...prev,
@@ -732,6 +802,11 @@ export function DecryptionGameContent() {
         user={user}
         room={selectedRoomObj?.name || (roomId ? `Room-${roomId}` : "Server Room A")}
         selectedMap={selectedRoomObj}
+        wsSendRef={wsSendRef}
+        onRoomCatsSync={handleRoomCatsSync}
+        onCatPlacedRemote={handleCatPlacedRemote}
+        onCatRemovedRemote={handleCatRemovedRemote}
+        onCatUpgradedRemote={handleCatUpgradedRemote}
       />
 
       {/* 2.5. Floating Top-Right User & Utility Panel (z-40) */}

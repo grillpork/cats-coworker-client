@@ -81,6 +81,11 @@ export default function ServerRoomMap({
   user,
   room,
   selectedMap,
+  onRoomCatsSync,
+  onCatPlacedRemote,
+  onCatRemovedRemote,
+  onCatUpgradedRemote,
+  wsSendRef,
 }) {
   const [dimensions, setDimensions] = useState({ width: 1680, height: 1104 });
   const [zoom, setZoom] = useState(1.0);
@@ -90,6 +95,17 @@ export default function ServerRoomMap({
 
   const mapRef = useRef(null);
   const socketRef = useRef(null);
+
+  // Attach wsSendRef so parent component can emit WS messages
+  useEffect(() => {
+    if (wsSendRef) {
+      wsSendRef.current = (data) => {
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify(data));
+        }
+      };
+    }
+  }, [wsSendRef]);
 
   // Other players online in the same room
   const [otherPlayers, setOtherPlayers] = useState({});
@@ -119,12 +135,12 @@ export default function ServerRoomMap({
           setCustomMap(resolvedMap);
           // Center character in custom map
           setPlayerPos({
-            x: (resolvedMap.cols * 48) / 2,
-            y: (resolvedMap.rows * 48) / 2,
+            x: (resolvedMap.cols * 48) / 2 - 24,
+            y: (resolvedMap.rows * 48) / 2 - 24,
           });
         }
-      } catch (e) {
-        console.error("Failed to load custom map/sprites in game:", e);
+      } catch (err) {
+        console.error("Failed to load active map configuration:", err);
       }
     };
     loadMapData();
@@ -148,27 +164,27 @@ export default function ServerRoomMap({
 
   // WebSocket connection for real-time multiplayer
   useEffect(() => {
-    if (typeof window === "undefined" || !room) return;
-
-    const isProd = window.location.hostname === "catako.site" || window.location.hostname === "catako.site";
-    const wsUrl = isProd ? "wss://backend-catako.site" : "ws://localhost:4000";
-
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:4000";
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
 
-    const identity = {
-      id: user?.id || `guest-${Math.random().toString(36).substr(2, 9)}`,
-      username: user?.username || user?.email?.split('@')[0] || `Guest-${Math.floor(1000 + Math.random() * 9000)}`
-    };
-
     ws.onopen = () => {
-      ws.send(JSON.stringify({
-        type: "join",
-        user: identity,
-        room: room,
-        x: playerPos.x,
-        y: playerPos.y
-      }));
+      console.log("Connected to Server Room Gateway WS");
+      const currentRoomName = room || "Server Room A";
+      if (user && user.id) {
+        ws.send(
+          JSON.stringify({
+            type: "join",
+            user: {
+              id: user.id,
+              username: user.username || user.email?.split("@")[0] || `User-${user.id}`,
+            },
+            room: currentRoomName,
+            x: playerPos.x,
+            y: playerPos.y
+          })
+        );
+      }
     };
 
     ws.onmessage = (event) => {
@@ -183,6 +199,10 @@ export default function ServerRoomMap({
             initial[p.id] = p;
           });
           setOtherPlayers(initial);
+
+          if (data.roomCats && onRoomCatsSync) {
+            onRoomCatsSync(data.roomCats);
+          }
         } else if (data.type === "room_full") {
           alert("❌ " + (data.reason || "ห้องเซิร์ฟเวอร์นี้เต็มแล้ว (จำกัด 6 คน)"));
           window.location.href = "/";
@@ -211,6 +231,22 @@ export default function ServerRoomMap({
             delete next[data.id];
             return next;
           });
+        } else if (data.type === "sync_cats") {
+          if (data.roomCats && onRoomCatsSync) {
+            onRoomCatsSync(data.roomCats);
+          }
+        } else if (data.type === "cat_placed") {
+          if (onCatPlacedRemote) {
+            onCatPlacedRemote(data.slotIndex, data.cat);
+          }
+        } else if (data.type === "cat_removed") {
+          if (onCatRemovedRemote) {
+            onCatRemovedRemote(data.slotIndex);
+          }
+        } else if (data.type === "cat_upgraded") {
+          if (onCatUpgradedRemote) {
+            onCatUpgradedRemote(data.slotIndex, data.cat);
+          }
         } else if (data.type === "announcement") {
           alert(`📢 ประกาศจากระบบ:\n\n${data.message}`);
         } else if (data.type === "kicked") {
@@ -227,7 +263,7 @@ export default function ServerRoomMap({
         ws.close();
       }
     };
-  }, [user, room]);
+  }, [user, room, onRoomCatsSync, onCatPlacedRemote, onCatRemovedRemote, onCatUpgradedRemote]);
 
   // Handle mouse scroll wheel zoom
   useEffect(() => {
