@@ -164,6 +164,9 @@ export default function ServerRoomMap({
 
   // WebSocket connection for real-time multiplayer
   useEffect(() => {
+    // Don't connect until user is loaded
+    if (!user || !user.id) return;
+
     let ws;
     try {
       const getWsUrl = () => {
@@ -187,20 +190,22 @@ export default function ServerRoomMap({
       ws.onopen = () => {
         console.log("Connected to Server Room Gateway WS:", wsUrl);
         const currentRoomName = room || "Server Room A";
-        if (user && user.id) {
-          ws.send(
-            JSON.stringify({
-              type: "join",
-              user: {
-                id: user.id,
-                username: user.username || user.email?.split("@")[0] || `User-${user.id}`,
-              },
-              room: currentRoomName,
-              x: playerPos.x,
-              y: playerPos.y
-            })
-          );
-        }
+        ws.send(
+          JSON.stringify({
+            type: "join",
+            user: {
+              id: user.id,
+              username: user.username || user.email?.split("@")[0] || `User-${user.id}`,
+            },
+            room: currentRoomName,
+            x: playerPos.x,
+            y: playerPos.y
+          })
+        );
+      };
+
+      ws.onerror = (err) => {
+        console.error("WebSocket connection error:", err);
       };
 
       ws.onmessage = (event) => {
@@ -282,7 +287,9 @@ export default function ServerRoomMap({
         ws.close();
       }
     };
-  }, [user, room, onRoomCatsSync, onCatPlacedRemote, onCatRemovedRemote, onCatUpgradedRemote]);
+    // Only reconnect when user.id or room changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, room]);
 
   // Handle mouse scroll wheel zoom
   useEffect(() => {
