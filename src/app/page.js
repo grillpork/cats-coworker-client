@@ -12,16 +12,12 @@ import CollectionModal from "../components/CollectionModal";
 import { GAME_LEVELS } from "../data/levels";
 import { useAuth } from "../components/auth/hook/useAuth";
 import { useRouter } from "next/navigation";
-import { Sparkles, BookOpen, Cat, Package, Terminal, Users, LogOut, User } from "lucide-react";
+import { catsService } from "../services/cats.service";
+import { authServices } from "../services/auth.service";
+import { Sparkles, BookOpen, Cat, Package, Terminal, Users, LogOut, User, CheckCircle2, AlertCircle } from "lucide-react";
 import NumberFlow from '@number-flow/react';
 
-// Random cats pool
-const CAT_POOL = [
-  { name: "Tabby Cat", rarity: "COMMON", type: "standard", spRate: 10 },
-  { name: "Siamese Cat", rarity: "COMMON", type: "standard", spRate: 12 },
-  { name: "Persian Cat", rarity: "RARE", type: "diamond", spRate: 16 },
-  { name: "Sphynx Cat", rarity: "RARE", type: "diamond", spRate: 20 },
-];
+// Sound effect helper
 
 const playSoundEffect = (type) => {
   if (typeof window === "undefined") return;
@@ -82,30 +78,77 @@ export default function DecryptionGame() {
   const [currentLevelIdx, setCurrentLevelIdx] = useState(0);
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+
+  // Load deployed cats from database on mount if authenticated
+  useEffect(() => {
+    const loadPlacements = async () => {
+      try {
+        const res = await catsService.getPlacements();
+        const placements = res?.data || res || [];
+        const nextSlots = [null, null, null, null, null, null];
+        placements.forEach((p) => {
+          if (p.slotIndex >= 0 && p.slotIndex < 6) {
+            nextSlots[p.slotIndex] = p.cat;
+          }
+        });
+        setDeployedCats(nextSlots);
+      } catch (error) {
+        console.error("Failed to load cat placements:", error);
+      }
+    };
+
+    if (isAuthenticated) {
+      loadPlacements();
+    } else {
+      setDeployedCats([null, null, null, null, null, null]);
+    }
+  }, [isAuthenticated]);
+
+
+
+  // Load inventory cats from API on mount/auth state change
+  useEffect(() => {
+    const loadCats = async () => {
+      try {
+        const poolRes = await catsService.getAll();
+        const poolCats = poolRes?.data || poolRes || [];
+        setCatPool(poolCats);
+
+        console.log("loadCats - IsAuthenticated:", isAuthenticated);
+
+        if (isAuthenticated) {
+          const invRes = await catsService.getUserInventory();
+          console.log("loadCats - User Inventory Raw Response:", invRes);
+          const invCats = invRes?.data || invRes || [];
+          console.log("loadCats - User Inventory Cats:", invCats);
+          setInventory(invCats);
+        } else {
+          setInventory(poolCats);
+        }
+      } catch (error) {
+        console.error("Failed to load cats from API:", error);
+      }
+    };
+    loadCats();
+  }, [isAuthenticated]);
   
   // Game states
   const [userCodes, setUserCodes] = useState({});
   const [levelStatus, setLevelStatus] = useState({});
   const [currentOutput, setCurrentOutput] = useState(["", "", "", "", "", ""]);
   const [gameStatus, setGameStatus] = useState("idle"); // 'idle', 'playing', 'failed', 'completed'
-  const [timeLeft, setTimeLeft] = useState(120); // 120s timer
+  const [timeLeft, setTimeLeft] = useState(60); // 60s timer
   const [activeTestCaseIdx, setActiveTestCaseIdx] = useState(0);
   const [isGameActive, setIsGameActive] = useState(false);
   
   // Custom Game Tab and SP Systems
-  const [activeTab, setActiveTab] = useState("terminal"); // "terminal", "shop"
+  const [activeTab, setActiveTab] = useState("shop"); // "terminal", "shop"
   const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [spPoints, setSpPoints] = useState(0);
   const [deployedCats, setDeployedCats] = useState([null, null, null, null, null, null]);
   const [accumulatedSp, setAccumulatedSp] = useState([0, 0, 0, 0, 0, 0]);
-  const [inventory, setInventory] = useState([
-    { name: "Normal Brainrot", rarity: "COMMON", type: "standard", spRate: 10, id: 999 },
-    { name: "Golden Brainrot", rarity: "RARE", type: "standard", spRate: 20, id: 1000 },
-    { name: "Diamond Brainrot", rarity: "RARE", type: "diamond", spRate: 50, id: 1001 },
-    { name: "Lava Brainrot", rarity: "EPIC", type: "standard", spRate: 100, id: 1002 },
-    { name: "Rainbow Brainrot", rarity: "LEGENDARY", type: "standard", spRate: 500, id: 1003 },
-    { name: "Galaxy Brainrot", rarity: "MYTHIC", type: "standard", spRate: 1000, id: 1004 }
-  ]);
+  const [inventory, setInventory] = useState([]);
+  const [catPool, setCatPool] = useState([]);
   const [heldCat, setHeldCat] = useState(null);
   const [candyProgress, setCandyProgress] = useState(10); // 10% base progress
   const [serverTime, setServerTime] = useState(0.00);
@@ -129,6 +172,55 @@ export default function DecryptionGame() {
   const formattedCipherText = typeof cipherText === "string" ? cipherText.split("").join(" - ") : "";
   const subText = activeTestCase ? `Parameters: ${activeTestCase.input.map(x => typeof x === 'object' ? JSON.stringify(x) : x).join(', ')}` : "X - Y";
   const editorRef = useRef(null);
+
+  const [hasInitializedSp, setHasInitializedSp] = useState(false);
+  const [gameResult, setGameResult] = useState(null); // { status: 'success' | 'fail', cat?: any, error?: string }
+
+  // Load SP from user profile on mount / auth change
+  useEffect(() => {
+    console.log("Auth State Changed - User:", user, "IsAuthenticated:", isAuthenticated, "Current SP State:", spPoints, "HasInitialized:", hasInitializedSp);
+    if (isAuthenticated && user && user.sp !== undefined && !hasInitializedSp) {
+      console.log("Initializing SP points to:", user.sp);
+      setSpPoints(user.sp);
+      setHasInitializedSp(true);
+    } else if (!isAuthenticated) {
+      setHasInitializedSp(false);
+    }
+  }, [user, isAuthenticated, hasInitializedSp]);
+
+  // Debounced Auto-save SP to database when it changes
+  useEffect(() => {
+    if (!isAuthenticated || !hasInitializedSp) return;
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        await authServices.updateSp(spPoints);
+      } catch (err) {
+        console.error("Failed to auto-save SP:", err);
+      }
+    }, 2000);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [spPoints, isAuthenticated, hasInitializedSp]);
+
+  // Poll SP from database periodically (simulated webhook/polling)
+  useEffect(() => {
+    if (!isAuthenticated || !hasInitializedSp) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await authServices.getSp();
+        const serverSp = res?.data?.sp !== undefined ? res.data.sp : res?.sp;
+        if (serverSp !== undefined && serverSp !== spPoints) {
+          setSpPoints(serverSp);
+        }
+      } catch (err) {
+        console.error("Failed to poll SP:", err);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, hasInitializedSp, spPoints]);
 
   // Initialize level starter code
   useEffect(() => {
@@ -217,23 +309,32 @@ export default function DecryptionGame() {
   };
 
   // Place held cat on a desk
-  const handlePlaceCat = (slotIdx) => {
+  const handlePlaceCat = async (slotIdx) => {
     if (!heldCat) return;
 
     const nextSlots = [...deployedCats];
     nextSlots[slotIdx] = heldCat;
     setDeployedCats(nextSlots);
+    const catToPlace = heldCat;
     setHeldCat(null);
     playSoundEffect("place");
 
     setConsoleHistory((prev) => [
       ...prev,
-      { type: "sys", text: `Deployed ${heldCat.name} to server slot ${slotIdx + 1}.` }
-    ]);
+      { type: "sys", text: `Deployed ${catToPlace.name} to server slot ${slotIdx + 1}.` }
+    ].slice(-50));
+
+    if (isAuthenticated) {
+      try {
+        await catsService.placeCat(catToPlace, slotIdx);
+      } catch (error) {
+        console.error("Failed to save cat placement:", error);
+      }
+    }
   };
 
   // Recall working cat back to inventory
-  const handleRecallCat = (slotIdx) => {
+  const handleRecallCat = async (slotIdx) => {
     const cat = deployedCats[slotIdx];
     if (!cat) return; // empty slot
 
@@ -245,15 +346,24 @@ export default function DecryptionGame() {
     setConsoleHistory((prev) => [
       ...prev,
       { type: "sys", text: `Recalled ${cat.name} back to inventory.` }
-    ]);
+    ].slice(-50));
+
+    if (isAuthenticated) {
+      try {
+        await catsService.pickupCat(slotIdx);
+      } catch (error) {
+        console.error("Failed to remove cat placement:", error);
+      }
+    }
   };
 
   // Pickup cat from desk to head
-  const handlePickupCat = (slotIdx) => {
+  const handlePickupCat = async (slotIdx) => {
     const cat = deployedCats[slotIdx];
     if (!cat) return;
 
     const nextSlots = [...deployedCats];
+    const oldHeldCat = heldCat;
     if (heldCat) {
       // Swap
       nextSlots[slotIdx] = heldCat;
@@ -263,7 +373,15 @@ export default function DecryptionGame() {
       setConsoleHistory((prev) => [
         ...prev,
         { type: "sys", text: `Swapped. Now holding ${cat.name}.` }
-      ]);
+      ].slice(-50));
+
+      if (isAuthenticated) {
+        try {
+          await catsService.placeCat(oldHeldCat, slotIdx);
+        } catch (error) {
+          console.error("Failed to swap cat placement:", error);
+        }
+      }
     } else {
       nextSlots[slotIdx] = null;
       setHeldCat(cat);
@@ -272,7 +390,15 @@ export default function DecryptionGame() {
       setConsoleHistory((prev) => [
         ...prev,
         { type: "sys", text: `Picked up ${cat.name} to head.` }
-      ]);
+      ].slice(-50));
+
+      if (isAuthenticated) {
+        try {
+          await catsService.pickupCat(slotIdx);
+        } catch (error) {
+          console.error("Failed to pickup cat placement:", error);
+        }
+      }
     }
   };
 
@@ -414,36 +540,44 @@ export default function DecryptionGame() {
 
       const newHistoryLogs = [];
       if (overallSuccess) {
-        // Roll a random cat reward
-        const rolledCat = { ...CAT_POOL[Math.floor(Math.random() * CAT_POOL.length)], id: Date.now() };
+        let rolledCat = null;
+        if (catPool.length > 0) {
+          rolledCat = { ...catPool[Math.floor(Math.random() * catPool.length)], id: Date.now() };
+        }
         
         newHistoryLogs.push({
           type: "success",
           text: `Level ${currentLevel.id} decrypted! Password: ${outputStr}`,
         });
-        newHistoryLogs.push({
-          type: "sys",
-          text: `🎁 Rewards: Obtained Cat [${rolledCat.rarity}] ${rolledCat.name}! (+${rolledCat.spRate} SP/s)`,
-        });
 
-        const updatedStatus = { ...levelStatus, [currentLevel.id]: "pass" };
-        setLevelStatus(updatedStatus);
-        setInventory((prev) => [...prev, rolledCat]);
+        if (rolledCat) {
+          newHistoryLogs.push({
+            type: "sys",
+            text: `🎁 Rewards: Obtained Cat [${rolledCat.rarity}] ${rolledCat.name}! (+${rolledCat.spRate} SP/s)`,
+          });
+          setInventory((prev) => [...prev, rolledCat]);
+        }
         setSpPoints((prev) => prev + 100);
         setCandyProgress((prev) => Math.min(prev + 15, 100)); // increment progress
 
-        // Cycle to the next word and return to PLAY button screen
-        setTimeout(() => {
-          setIsGameActive(false);
-          setGameStatus("idle");
-          setCurrentOutput(["", "", "", "", "", ""]);
-        }, 2000);
+        // Show Success Modal
+        setGameResult({
+          status: "success",
+          cat: rolledCat,
+          sp: 100,
+        });
       } else {
         newHistoryLogs.push({
           type: "err",
           text: `Level ${currentLevel.id} verification failed.`,
         });
         setLevelStatus({ ...levelStatus, [currentLevel.id]: "fail" });
+        
+        // Show Failure Modal
+        setGameResult({
+          status: "fail",
+          error: "ฟังก์ชันคืนค่าผลลัพธ์ไม่ตรงตามเงื่อนไขทดสอบ กรุณาตรวจสอบผลลัพธ์การรันอีกครั้ง",
+        });
       }
 
       setConsoleHistory((prev) => [...prev, ...newHistoryLogs]);
@@ -461,13 +595,13 @@ export default function DecryptionGame() {
     setUserCodes(codes);
     setLevelStatus(statuses);
     setCurrentLevelIdx(0);
-    setTimeLeft(120);
+    setTimeLeft(60);
     setGameStatus("idle");
     setIsGameActive(false);
     setCurrentOutput(["", "", "", "", "", ""]);
     setDeployedCats([null, null, null, null, null, null]);
     setAccumulatedSp([0, 0, 0, 0, 0, 0]);
-    setInventory([{ name: "Tabby Cat", rarity: "COMMON", type: "standard", spRate: 10, id: 999 }]);
+    setInventory(catPool);
     setSpPoints(0);
     setCandyProgress(10);
     setServerTime(0);
@@ -481,7 +615,7 @@ export default function DecryptionGame() {
     const randomIdx = Math.floor(Math.random() * currentLevel.testCases.length);
     setActiveTestCaseIdx(randomIdx);
     setCurrentOutput(["", "", "", "", "", ""]);
-    setTimeLeft(120);
+    setTimeLeft(60);
     setGameStatus("playing");
     setIsGameActive(true);
     setConsoleHistory((prev) => [
@@ -500,7 +634,7 @@ export default function DecryptionGame() {
     setConsoleHistory((prev) => [
       ...prev,
       { type: "success", text: `Harvested +${amount} SP from Desk ${slotIdx + 1}!` }
-    ]);
+    ].slice(-50));
   };
 
   const handleConsoleSubmit = (e) => {
@@ -541,86 +675,7 @@ export default function DecryptionGame() {
   };
 
   return (
-    <main className="relative w-screen h-screen bg-[#141517] text-slate-100 font-sans overflow-hidden select-none">
-      {activeTab === "terminal" ? (
-        <div className="w-full h-full flex flex-col bg-[#1e1e1e] z-50 relative">
-          {/* Header for Full Screen Mode */}
-          <div className="flex items-center justify-between p-4 bg-[#252526] border-b border-[#333] shadow-lg z-50">
-            <button
-              onClick={() => setActiveTab("inventory")}
-              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded text-white font-mono text-sm shadow-md transition-colors"
-            >
-              ← Back to Server Room
-            </button>
-            <div className="text-emerald-400 font-mono font-bold tracking-widest text-lg">
-              DECRYPTION TERMINAL - {currentLevel?.title || "LEVEL"}
-            </div>
-            <div className={`text-[12px] font-black px-4 py-2 rounded-lg border ${
-              timeLeft < 30 ? "text-rose-400 border-rose-450/20 bg-rose-500/10 animate-pulse" : "text-amber-400 border-amber-400/10 bg-black/45"
-            }`}>
-              ⏱ LOCKDOWN: {formatTime(timeLeft)}
-            </div>
-          </div>
-          
-          <div className="flex-1 overflow-hidden relative bg-[#141517] p-8 flex flex-col items-center gap-6">
-            
-            <div className="flex flex-col items-center gap-4 w-full max-w-xl pt-4">
-              {/* Dashboard from Server Map */}
-              <div className="w-full bg-[#17181a]/90 backdrop-blur-md border border-zinc-800 rounded-lg p-3 flex flex-col items-center gap-3 shadow-2xl">
-                <div className="flex items-center justify-between w-full font-mono text-xs text-zinc-500 border-b border-zinc-800/80 pb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>SERVER A</span>
-                  </div>
-                  <div className="text-amber-500 font-bold">{serverTime} s</div>
-                  <div>
-                    Score: <span className="text-emerald-400 font-black">{spPoints} SP</span>
-                  </div>
-                </div>
-
-                <div className="w-full font-mono text-[10px] space-y-1.5">
-                  <div className="flex justify-between text-zinc-500">
-                    <span>CANDY RATIO</span>
-                    <span>10% ⇒ {candyProgress}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-zinc-800 rounded overflow-hidden">
-                    <div 
-                      className="h-full bg-emerald-500 transition-all duration-500" 
-                      style={{ width: `${candyProgress}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Target Cipher Key */}
-              <div className="w-3/4 text-center font-mono select-none bg-black/85 border-2 border-emerald-500/30 rounded-lg px-8 py-4 shadow-[0_0_15px_rgba(16,185,129,0.15)] flex flex-col items-center gap-2">
-                <span className="text-[10px] text-emerald-500/60 font-bold tracking-widest uppercase">
-                  📡 TARGET CIPHER KEY
-                </span>
-                <div className="text-3xl font-black tracking-[0.2em] text-emerald-400 drop-shadow-[0_0_6px_#34d399] animate-pulse">
-                  {formattedCipherText || "???"}
-                </div>
-                <div className="text-xs text-zinc-400 font-semibold uppercase tracking-wider mt-1">
-                  {subText}
-                </div>
-              </div>
-            </div>
-
-            <div className="w-full max-w-4xl flex-1 min-h-0">
-               <CodeEditor
-                 code={activeCode}
-                 onCodeChange={handleCodeChange}
-                 onRun={runTestCases}
-                 isRunning={isRunning}
-                 editorRef={editorRef}
-                 onClose={() => setActiveTab("inventory")}
-                 isFullScreen={true}
-               />
-            </div>
-          </div>
-        </div>
-      ) : (
-      <>
+    <main className="relative w-screen h-screen bg-[#101114] text-slate-100 font-sans overflow-hidden select-none">
       
       {/* 1. Fullscreen Server Room Map (Background z-0) */}
       <ServerRoomMap
@@ -849,11 +904,10 @@ export default function DecryptionGame() {
           {/* Decrypt Button */}
           <button
             onClick={() => {
-              setActiveTab("terminal");
-              if (!isGameActive) handleStartPlay();
+              router.push("/decryption");
             }}
             className="w-12 h-12 mx-auto bg-emerald-600 hover:bg-emerald-500 rounded-xl flex flex-col items-center justify-center shadow-lg active:scale-95 transition-all border-2 border-emerald-700 mt-1 relative"
-            title="Decrypt (Play)"
+            title="ถอดรหัสผ่าน (เล่นเกม)"
           >
             <Terminal className="w-5 h-5 text-white drop-shadow-md" />
           </button>
@@ -870,8 +924,8 @@ export default function DecryptionGame() {
           {inventory.slice(0, 5).map((cat, i) => {
             return (
               <img 
-                key={cat.id || i}
-                src={`/cats/cat-${cat.rarity.toLowerCase()}.png`}
+                key={`cat-${cat.id || ''}-${i}`}
+                src={cat.image || `/cats/cat-${cat.rarity.toLowerCase()}.png`}
                 alt={cat.name}
                 className="w-10 h-10 object-contain drop-shadow-[0_-4px_6px_rgba(0,0,0,0.6)] animate-pulse cursor-pointer hover:scale-110 active:scale-95 transition-all"
                 style={{ animationDelay: `${i * 0.2}s` }}
@@ -884,29 +938,9 @@ export default function DecryptionGame() {
 
         {/* Center: Active Mode Box */}
         <div className="flex-1 h-full flex items-center justify-center overflow-hidden">
-          {activeTab === "terminal" ? (
-            isGameActive ? (
-              <div className="flex flex-col items-center justify-center font-mono">
-                <div className={`text-[10px] font-black px-3 py-1 rounded bg-black/45 border ${
-                  timeLeft < 30 ? "text-rose-400 border-rose-450/20 animate-pulse" : "text-amber-400 border-amber-400/10"
-                }`}>
-                  ⏱ LOCKDOWN: {formatTime(timeLeft)}
-                </div>
-                <span className="text-[9px] text-[#bcaaa4] mt-1">Code editor active on bottom-left</span>
-              </div>
-            ) : (
-              <button
-                onClick={handleStartPlay}
-                className="px-6 py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-mono font-black text-xs rounded active:scale-95 transition-all tracking-[0.15em]"
-              >
-                START DECRYPTION
-              </button>
-            )
-          ) : activeTab === "shop" ? (
-            <div className="text-[10px] font-mono text-[#bcaaa4] uppercase tracking-wider text-center">
-              🛒 SP Shop Closed. Collect more SP points to buy upgrades!
-            </div>
-          ) : null}
+          <div className="text-[10px] font-sans font-bold text-zinc-500 uppercase tracking-widest text-center">
+            สถานะเซิร์ฟเวอร์ออนไลน์
+          </div>
         </div>
 
       </div>
@@ -930,9 +964,6 @@ export default function DecryptionGame() {
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>Show Logs</span>
         </button>
-      )}
-
-      </>
       )}
 
       {/* 6. GameOverOverlays (z-50) */}
@@ -1034,6 +1065,101 @@ export default function DecryptionGame() {
               onSelectCat={handleSelectCat}
               onUpgradeCat={handleUpgradeCat}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Game Result Modal Popup */}
+      {gameResult && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`max-w-sm w-full bg-[#101114] border ${gameResult.status === 'success' ? 'border-emerald-500/20' : 'border-red-500/20'} rounded-3xl p-6 relative flex flex-col gap-4 font-sans shadow-2xl text-center`}>
+            
+            {gameResult.status === 'success' ? (
+              <>
+                <div className="mx-auto w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mb-1">
+                  <CheckCircle2 className="w-7 h-7 stroke-[1.5]" />
+                </div>
+                <h2 className="text-lg font-black tracking-wider text-emerald-400 uppercase">
+                  ถอดรหัสผ่านสำเร็จ! 🎉
+                </h2>
+                <p className="text-zinc-400 text-xs leading-relaxed">
+                  ยินดีด้วย! คุณสามารถถอดรหัสผ่านเซิร์ฟเวอร์ระบบสำเร็จและยับยั้งภัยคุกคามได้!
+                </p>
+
+                <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 my-1 text-left space-y-2.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-zinc-500">รางวัลที่ได้รับ:</span>
+                    <span className="text-emerald-400 font-bold font-mono">+{gameResult.sp} SP</span>
+                  </div>
+
+                  {gameResult.cat && (
+                    <div className="flex items-center gap-3 bg-[#141517] p-2.5 rounded-xl border border-zinc-900">
+                      <div className="w-10 h-10 bg-zinc-900 rounded-lg flex items-center justify-center border border-zinc-800 overflow-hidden relative">
+                        {gameResult.cat.image ? (
+                          <img src={gameResult.cat.image} alt={gameResult.cat.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-lg">🐱</span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{gameResult.cat.name}</div>
+                        <div className="text-[10px] text-zinc-500">
+                          ระดับ: <span className="font-bold text-rose-500">{gameResult.cat.rarity}</span> | +{gameResult.cat.spRate} SP/วินาที
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsGameActive(false);
+                    setGameStatus("idle");
+                    setCurrentOutput(["", "", "", "", "", ""]);
+                    setGameResult(null);
+                  }}
+                  className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-[#101114] font-black rounded-xl text-xs transition-all active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                >
+                  ดำเนินการต่อ
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="mx-auto w-14 h-14 bg-red-500/10 border border-red-500/20 text-red-500 rounded-full flex items-center justify-center mb-1">
+                  <AlertCircle className="w-7 h-7 stroke-[1.5]" />
+                </div>
+                <h2 className="text-lg font-black tracking-wider text-red-500 uppercase">
+                  ถอดรหัสผ่านล้มเหลว! ❌
+                </h2>
+                <p className="text-zinc-400 text-xs leading-relaxed">
+                  ระบบตรวจพบผลลัพธ์ของฟังก์ชันไม่ถูกต้องตามชุดทดสอบ
+                </p>
+                <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-4 my-1 text-xs text-red-400 leading-relaxed text-center font-mono">
+                  {gameResult.error}
+                </div>
+
+                <div className="flex gap-3 mt-2">
+                  <button
+                    onClick={() => {
+                      setIsGameActive(false);
+                      setGameStatus("failed");
+                      setCurrentOutput(["", "", "", "", "", ""]);
+                      setGameResult(null);
+                    }}
+                    className="flex-1 py-3 bg-zinc-950 border border-zinc-900 hover:border-zinc-800 rounded-xl text-[10px] font-bold text-zinc-400"
+                  >
+                    กลับห้องเซิร์ฟเวอร์
+                  </button>
+                  <button
+                    onClick={() => setGameResult(null)}
+                    className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl text-[10px] transition-all active:scale-95 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+                  >
+                    ลองใหม่อีกครั้ง
+                  </button>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       )}

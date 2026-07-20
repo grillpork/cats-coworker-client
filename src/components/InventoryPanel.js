@@ -11,7 +11,7 @@ const rarityToImage = {
   DIVINE: '/cats/cat-divine.png'
 };
 
-const getCatImage = (rarity) => rarityToImage[rarity] || '/cats/cat-common.png';
+const getCatImage = (cat) => cat?.image || rarityToImage[cat?.rarity] || '/cats/cat-common.png';
 
 const getAuraClass = (rarity) => {
   switch (rarity) {
@@ -58,7 +58,7 @@ export default function InventoryPanel({
               >
                 <div className="flex items-end justify-center bg-black/30 rounded-full border border-zinc-700/50 w-14 h-14 mt-1">
                   <img 
-                    src={getCatImage(cat.rarity)} 
+                    src={getCatImage(cat)} 
                     alt={cat.name} 
                     className={`w-10 h-10 object-contain z-20 mb-1.5 ${getAuraClass(cat.rarity)}`}
                   />

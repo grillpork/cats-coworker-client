@@ -10,7 +10,7 @@ const rarityToImage = {
   MYTHIC: '/cats/cat-mythic.png',
   DIVINE: '/cats/cat-divine.png'
 };
-const getCatImage = (rarity) => rarityToImage[rarity] || '/cats/cat-common.png';
+const getCatImage = (cat) => cat?.image || rarityToImage[cat?.rarity] || '/cats/cat-common.png';
 
 const getAuraClass = (rarity) => {
   switch (rarity) {
@@ -133,7 +133,7 @@ export default function CatWorkingGrid({
                   {/* Cat & Computer Sprite */}
                   <div className="flex items-end justify-center my-1 z-10">
                     <img 
-                      src={getCatImage(cat.rarity)} 
+                      src={getCatImage(cat)} 
                       alt={cat.name} 
                       className={`w-12 h-12 object-contain z-20 ${getAuraClass(cat.rarity)}`}
                     />

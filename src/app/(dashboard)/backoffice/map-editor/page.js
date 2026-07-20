@@ -1,32 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useAuth } from "../../../../components/auth/hook/useAuth";
+import { mapService } from "../../../../services/map.service";
 
-const TILE_ASSETS = [
-  { id: "00", name: "Empty (Solid)", src: null },
-  { id: "01", name: "Floor 1", src: "/map-box/map-box-01.png" },
-  { id: "02", name: "Floor 2", src: "/map-box/map-box-02.png" },
-  { id: "03", name: "Floor 3", src: "/map-box/map-box-03.png" },
-  { id: "04", name: "Floor 4", src: "/map-box/map-box-04.png" },
-  { id: "05", name: "Wall Top", src: "/map-box/map-box-05.png" },
-  { id: "06", name: "Wall Bottom", src: "/map-box/map-box-06.png" },
-  { id: "07", name: "Wall Left", src: "/map-box/map-box-07.png" },
-  { id: "08", name: "Wall Right", src: "/map-box/map-box-08.png" },
-  { id: "09", name: "Corner Top-Left", src: "/map-box/map-box-09.png" },
-  { id: "10", name: "Corner Top-Right", src: "/map-box/map-box-10.png" },
-  { id: "11", name: "Corner Bottom-Left", src: "/map-box/map-box-11.png" },
-  { id: "12", name: "Corner Bottom-Right", src: "/map-box/map-box-12.png" },
-  { id: "13", name: "Decor 1", src: "/map-box/map-box-13.png" },
-  { id: "14", name: "Decor 2", src: "/map-box/map-box-14.png" },
-  { id: "15", name: "Decor 3", src: "/map-box/map-box-15.png" },
-  { id: "16", name: "Decor 4", src: "/map-box/map-box-16.png" },
-];
+
 
 const DEFAULT_COLS = 20;
 const DEFAULT_ROWS = 15;
 
 export default function MapEditorPage() {
+  const { user, isAuthenticated, loading } = useAuth();
+  const [tileAssets, setTileAssets] = useState([]);
   const [rows, setRows] = useState(DEFAULT_ROWS);
   const [cols, setCols] = useState(DEFAULT_COLS);
   const [rowInput, setRowInput] = useState(String(DEFAULT_ROWS));
@@ -40,35 +26,52 @@ export default function MapEditorPage() {
   const [exportedJson, setExportedJson] = useState("");
   const [importInput, setImportInput] = useState("");
 
-  // Load from localStorage on mount
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("customMapData");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.rows && parsed.cols && Array.isArray(parsed.tiles)) {
-            setRows(parsed.rows);
-            setCols(parsed.cols);
-            setRowInput(String(parsed.rows));
-            setColInput(String(parsed.cols));
-            setGrid(parsed.tiles);
-          }
-        } catch (e) {
-          console.error("Failed to load map from localStorage:", e);
+  // Load sprites and active map layout from database
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Fetch sprite assets
+        const spritesRes = await mapService.getSprites();
+        const sprites = spritesRes?.data || spritesRes || [];
+        setTileAssets(sprites);
+        if (sprites.length > 0) {
+          setSelectedTileId(sprites[0].tileId);
         }
-      }
-    }
-  }, []);
 
-  const handleSaveToGame = () => {
+        // Fetch active map layout
+        const mapRes = await mapService.getActiveMap();
+        const map = mapRes?.data || mapRes;
+        if (map && map.rows && map.cols && Array.isArray(map.tiles)) {
+          setRows(map.rows);
+          setCols(map.cols);
+          setRowInput(String(map.rows));
+          setColInput(String(map.cols));
+          setGrid(map.tiles);
+        }
+      } catch (e) {
+        console.error("Failed to load map/sprites from API:", e);
+      }
+    };
+
+    if (isAuthenticated && user?.roleName?.toLowerCase() === "admin") {
+      loadData();
+    }
+  }, [isAuthenticated, user]);
+
+  const handleSaveToGame = async () => {
     const mapData = {
+      name: "Custom Server Room Map",
       rows,
       cols,
       tiles: grid,
     };
-    localStorage.setItem("customMapData", JSON.stringify(mapData));
-    alert("Map saved to game! Returning to game will display your custom map.");
+    try {
+      await mapService.saveMap(mapData);
+      alert("บันทึกแผนที่ลงฐานข้อมูลเรียบร้อยแล้ว! เมื่อเปิดเกมจะแสดงแผนที่ที่ออกแบบไว้");
+    } catch (e) {
+      console.error(e);
+      alert("บันทึกแผนที่ล้มเหลว: " + (e.response?.data?.error || e.message));
+    }
   };
 
   const handleTileClick = (r, c, tileId = selectedTileId) => {
@@ -125,14 +128,44 @@ export default function MapEditorPage() {
         setRows(parsed.rows);
         setCols(parsed.cols);
         setGrid(parsed.tiles);
-        alert("Map imported successfully!");
+        alert("นำเข้าข้อมูลแผนที่สำเร็จ!");
       } else {
-        alert("Invalid format! Must contain rows, cols, and tiles grid array.");
+        alert("รูปแบบไม่ถูกต้อง! ต้องมีแถว (rows) คอลัมน์ (cols) และตารางกระเบื้อง (tiles)");
       }
     } catch (e) {
-      alert("Failed to parse JSON: " + e.message);
+      alert("การวิเคราะห์ JSON ล้มเหลว: " + e.message);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#111215] text-slate-100 flex items-center justify-center font-mono">
+        <div className="text-center flex flex-col gap-2">
+          <span className="text-2xl animate-pulse">🔒 กำลังป้องกันพื้นที่ทำงาน...</span>
+          <span className="text-[10px] text-zinc-500 uppercase">กำลังตรวจสอบสิทธิ์การใช้งาน</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || user?.roleName?.toLowerCase() !== "admin") {
+    return (
+      <div className="min-h-screen bg-[#111215] text-slate-100 flex items-center justify-center font-mono p-6">
+        <div className="max-w-md w-full bg-[#16171a] border border-red-950/40 rounded-2xl p-6 text-center shadow-[0_0_50px_rgba(239,68,68,0.05)]">
+          <span className="text-4xl">🚫</span>
+          <h2 className="text-lg font-black text-red-500 mt-4 tracking-widest uppercase">ปฏิเสธการเข้าถึง</h2>
+          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+            สิทธิ์การเข้าถึงเฉพาะผู้ดูแลระบบเท่านั้นในการเข้าถึงและแก้ไขเครื่องมือจัดแผนที่เซิร์ฟเวอร์
+          </p>
+          <div className="mt-6 flex justify-center">
+            <Link href="/" className="px-6 py-2 bg-zinc-900 border border-zinc-700 hover:border-rose-500 rounded text-xs font-black transition-all">
+              ⬅ กลับไปยังหน้าหลักเกม
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#111215] text-slate-100 font-mono p-6 flex flex-col gap-6 selection:bg-rose-500 selection:text-white">
@@ -140,19 +173,19 @@ export default function MapEditorPage() {
       <header className="flex items-center justify-between border-b border-zinc-800 pb-4">
         <div>
           <h1 className="text-2xl font-black text-rose-500 tracking-wider flex items-center gap-2">
-            <span>🛠</span> SERVER MAP EDITOR
+            <span>🛠</span> เครื่องมือจัดแผนที่เซิร์ฟเวอร์
           </h1>
-          <p className="text-[10px] text-zinc-500 uppercase mt-0.5">Design customized room layouts for your servers</p>
+          <p className="text-[10px] text-zinc-500 uppercase mt-0.5">ออกแบบและปรับแต่งห้องทำงานของเซิร์ฟเวอร์ของคุณ</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={handleSaveToGame}
             className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 rounded text-xs font-black transition-colors"
           >
-            💾 SAVE TO GAME
+            💾 บันทึกแผนที่เข้าเกม
           </button>
           <Link href="/" className="px-4 py-1.5 bg-zinc-900 border border-zinc-700 hover:border-rose-500 rounded text-xs font-black transition-colors">
-            ⬅ BACK TO GAME
+            ⬅ กลับไปที่เกม
           </Link>
         </div>
       </header>
@@ -164,47 +197,49 @@ export default function MapEditorPage() {
         <div className="w-full lg:w-80 bg-[#16171a] border border-zinc-800 rounded-xl p-4 flex flex-col gap-4">
           <div>
             <h2 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-3 border-b border-zinc-800/80 pb-1.5">
-              Tile Palette
+              คลังแผ่นกระเบื้อง
             </h2>
             <div className="grid grid-cols-4 gap-2">
-              {TILE_ASSETS.map((t) => (
+              {tileAssets.map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => setSelectedTileId(t.id)}
+                  onClick={() => setSelectedTileId(t.tileId)}
                   draggable="true"
                   onDragStart={(e) => {
-                    e.dataTransfer.setData("tileId", t.id);
+                    e.dataTransfer.setData("tileId", t.tileId);
                   }}
                   className={`relative p-1 rounded-lg border-2 aspect-square flex items-center justify-center transition-all bg-black/20 cursor-grab active:cursor-grabbing ${
-                    selectedTileId === t.id
+                    selectedTileId === t.tileId
                       ? "border-rose-500 scale-105 bg-rose-500/10 shadow-[0_0_12px_rgba(244,63,94,0.3)]"
                       : "border-zinc-800 hover:border-zinc-600"
                   }`}
-                  title={`${t.name} (Drag to canvas or click to select)`}
+                  title={`${t.name} (ลากลงตาราง หรือ คลิกเพื่อเลือก)`}
                 >
-                  {t.src ? (
-                    <img src={t.src} alt={t.name} className="w-full h-full object-contain pointer-events-none" />
+                  {t.image ? (
+                    <img src={t.image} alt={t.name} className="w-full h-full object-contain pointer-events-none" />
                   ) : (
                     <div className="w-full h-full bg-[#1c1d22] border border-zinc-800 rounded" />
                   )}
                   <span className="absolute bottom-0 right-1 text-[8px] font-black text-zinc-500 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                    {t.id}
+                    {t.tileId}
                   </span>
                 </button>
               ))}
             </div>
-            <div className="mt-2 text-center text-[10px] text-rose-400 font-bold uppercase">
-              Active: {TILE_ASSETS.find((t) => t.id === selectedTileId)?.name}
-            </div>
+            {tileAssets.length > 0 && (
+              <div className="mt-2 text-center text-[10px] text-rose-400 font-bold uppercase">
+                เลือกอยู่: {tileAssets.find((t) => t.tileId === selectedTileId)?.name}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
             <h2 className="text-xs font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-800/80 pb-1.5">
-              Grid Settings
+              ขนาดตารางแผนที่
             </h2>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <label className="flex flex-col gap-1 text-[10px] text-zinc-500">
-                ROWS (5-40):
+                จำนวนแถว (5-40):
                 <input
                   type="text"
                   inputMode="numeric"
@@ -227,7 +262,7 @@ export default function MapEditorPage() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-[10px] text-zinc-500">
-                COLS (5-40):
+                คอลัมน์ (5-40):
                 <input
                   type="text"
                   inputMode="numeric"
@@ -255,20 +290,20 @@ export default function MapEditorPage() {
           {/* Quick Actions */}
           <div className="flex flex-col gap-2">
             <h2 className="text-xs font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-800/80 pb-1.5">
-              Quick Actions
+              เครื่องมือด่วน
             </h2>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={handleFillAll}
                 className="py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px] font-bold"
               >
-                FILL ALL
+                ปูทั้งหมด
               </button>
               <button
                 onClick={handleClear}
                 className="py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px] font-bold"
               >
-                CLEAR ALL
+                ล้างทั้งหมด
               </button>
             </div>
           </div>
@@ -277,7 +312,7 @@ export default function MapEditorPage() {
         {/* Center Canvas */}
         <div className="flex-1 bg-[#16171a] border border-zinc-800 rounded-xl p-4 flex flex-col justify-center items-center overflow-auto min-h-[500px]">
           <p className="text-[10px] text-zinc-500 uppercase mb-2 select-none">
-            💡 Drag & Drop a tile here, OR hold click and drag mouse to paint
+            💡 ลากแผ่นกระเบื้องมาวางที่นี่ หรือ คลิกเมาส์ค้างไว้แล้วลากเพื่อระบายสีแผนที่
           </p>
           <div
             className="grid gap-[1px] bg-zinc-900 border-2 border-zinc-800 p-1"
@@ -290,7 +325,7 @@ export default function MapEditorPage() {
           >
             {grid.map((rowArr, r) =>
               rowArr.map((tileId, c) => {
-                const asset = TILE_ASSETS.find((t) => t.id === tileId) || TILE_ASSETS[0];
+                const asset = tileAssets.find((t) => t.tileId === tileId);
                 return (
                   <button
                     key={`${r}-${c}`}
@@ -313,8 +348,8 @@ export default function MapEditorPage() {
                     }}
                     className="w-10 h-10 bg-black/40 hover:bg-zinc-800/60 flex items-center justify-center transition-colors overflow-hidden group relative"
                   >
-                    {asset && asset.src ? (
-                      <img src={asset.src} alt={asset.name} className="w-full h-full object-cover pointer-events-none" />
+                    {asset && asset.image ? (
+                      <img src={asset.image} alt={asset.name} className="w-full h-full object-cover pointer-events-none" />
                     ) : (
                       <div className="w-full h-full bg-[#151619]" />
                     )}
@@ -332,19 +367,19 @@ export default function MapEditorPage() {
         <div className="bg-[#16171a] border border-zinc-800 rounded-xl p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5">
             <h2 className="text-xs font-black text-zinc-400 uppercase tracking-widest">
-              Export Map Data
+              ส่งออกข้อมูลแผนที่ (Export)
             </h2>
             <button
               onClick={handleExport}
               className="px-3 py-1 bg-rose-600 hover:bg-rose-500 rounded text-[9px] font-black"
             >
-              GENERATE JSON
+              สร้างรหัส JSON
             </button>
           </div>
           <textarea
             readOnly
             value={exportedJson}
-            placeholder="Click Generate JSON to export your map data here..."
+            placeholder="คลิกปุ่มสร้างรหัสเพื่อดึงข้อมูลรหัสแผนที่..."
             className="w-full h-32 bg-black/40 border border-zinc-800 rounded p-2 text-[10px] text-emerald-400 font-mono focus:outline-none resize-none"
           />
         </div>
@@ -352,19 +387,19 @@ export default function MapEditorPage() {
         <div className="bg-[#16171a] border border-zinc-800 rounded-xl p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5">
             <h2 className="text-xs font-black text-zinc-400 uppercase tracking-widest">
-              Import Map Data
+              นำเข้าข้อมูลแผนที่ (Import)
             </h2>
             <button
               onClick={handleImport}
               className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-[9px] font-black"
             >
-              LOAD MAP
+              โหลดข้อมูลแผนที่
             </button>
           </div>
           <textarea
             value={importInput}
             onChange={(e) => setImportInput(e.target.value)}
-            placeholder="Paste your exported JSON map data here to load..."
+            placeholder="วางรหัส JSON เพื่อนำเข้าโครงสร้างแผนที่..."
             className="w-full h-32 bg-black/40 border border-zinc-800 rounded p-2 text-[10px] text-zinc-300 font-mono focus:outline-none resize-none focus:border-emerald-500 transition-colors"
           />
         </div>

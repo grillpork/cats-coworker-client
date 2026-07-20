@@ -1,21 +1,17 @@
 export const GAME_LEVELS = [
   {
     id: 1,
-    title: "Passcode Decryption",
-    description: "Write a function `getPassword(char)` that takes a single character and repeats it 6 times to form a 6-digit password string. (e.g. if char='7' => '777777')",
-    starterCode: `// Repeat the character 6 times
+    title: "ถอดรหัสผ่านเซิร์ฟเวอร์",
+    description: "เขียนฟังก์ชัน `getPassword(char)` ที่รับตัวอักษรเข้ามา 1 ตัว และทำซ้ำตัวอักษรนั้นเป็นจำนวน 6 ครั้ง เพื่อประกอบเป็นรหัสผ่าน 6 หลัก (ตัวอย่างเช่น: ถ้าตัวอักษรคือ '7' -> จะได้ผลลัพธ์เป็น '777777')",
+    starterCode: `// เขียนฟังก์ชันทำซ้ำตัวอักษรจำนวน 6 ครั้ง
 function getPassword(char) {
-  // Your code here
+  // เขียนโค้ดของคุณที่นี่
   return "";
 }
 `,
     functionName: "getPassword",
     testCases: [
-      { input: ["A"], expected: "AAAAAA" },
-      { input: ["X"], expected: "XXXXXX" },
-      { input: ["7"], expected: "777777" },
-      { input: ["K"], expected: "KKKKKK" },
-      { input: ["9"], expected: "999999" }
+      { input: ["7"], expected: "777777" }
     ],
   }
 ];

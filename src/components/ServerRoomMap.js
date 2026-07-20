@@ -2,26 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import CatWorkingGrid from "./CatWorkingGrid";
+import { mapService } from "../services/map.service";
 
-const TILE_ASSETS = [
-  { id: "00", name: "Empty (Solid)", src: null },
-  { id: "01", name: "Floor 1", src: "/map-box/map-box-01.png" },
-  { id: "02", name: "Floor 2", src: "/map-box/map-box-02.png" },
-  { id: "03", name: "Floor 3", src: "/map-box/map-box-03.png" },
-  { id: "04", name: "Floor 4", src: "/map-box/map-box-04.png" },
-  { id: "05", name: "Wall Top", src: "/map-box/map-box-05.png" },
-  { id: "06", name: "Wall Bottom", src: "/map-box/map-box-06.png" },
-  { id: "07", name: "Wall Left", src: "/map-box/map-box-07.png" },
-  { id: "08", name: "Wall Right", src: "/map-box/map-box-08.png" },
-  { id: "09", name: "Corner Top-Left", src: "/map-box/map-box-09.png" },
-  { id: "10", name: "Corner Top-Right", src: "/map-box/map-box-10.png" },
-  { id: "11", name: "Corner Bottom-Left", src: "/map-box/map-box-11.png" },
-  { id: "12", name: "Corner Bottom-Right", src: "/map-box/map-box-12.png" },
-  { id: "13", name: "Decor 1", src: "/map-box/map-box-13.png" },
-  { id: "14", name: "Decor 2", src: "/map-box/map-box-14.png" },
-  { id: "15", name: "Decor 3", src: "/map-box/map-box-15.png" },
-  { id: "16", name: "Decor 4", src: "/map-box/map-box-16.png" },
-];
+
 
 // Cute pixel player avatar SVG
 // Removed PlayerSVG in favor of image
@@ -111,26 +94,31 @@ export default function ServerRoomMap({
   // Manage keys pressed to support diagonal movement
   const keysPressed = useRef({});
 
+  const [tileAssets, setTileAssets] = useState([]);
+
   // Load custom map on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("customMapData");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.rows && parsed.cols && Array.isArray(parsed.tiles)) {
-            setCustomMap(parsed);
-            // Center character in custom map
-            setPlayerPos({
-              x: (parsed.cols * 48) / 2,
-              y: (parsed.rows * 48) / 2,
-            });
-          }
-        } catch (e) {
-          console.error("Failed to load custom map:", e);
+    const loadMapData = async () => {
+      try {
+        const spritesRes = await mapService.getSprites();
+        const sprites = spritesRes?.data || spritesRes || [];
+        setTileAssets(sprites);
+
+        const mapRes = await mapService.getActiveMap();
+        const map = mapRes?.data || mapRes;
+        if (map && map.rows && map.cols && Array.isArray(map.tiles)) {
+          setCustomMap(map);
+          // Center character in custom map
+          setPlayerPos({
+            x: (map.cols * 48) / 2,
+            y: (map.rows * 48) / 2,
+          });
         }
+      } catch (e) {
+        console.error("Failed to load custom map/sprites in game:", e);
       }
-    }
+    };
+    loadMapData();
   }, []);
 
   // Initialize and handle window resizing
@@ -342,7 +330,7 @@ export default function ServerRoomMap({
         >
           {/* Render Tiled Floor and Wall Grid */}
           <div className="absolute inset-0 z-0">
-            {(() => {
+            {React.useMemo(() => {
               const tileSize = 48;
               const mapCols = customMap ? customMap.cols : Math.ceil(dimensions.width / tileSize);
               const mapRows = customMap ? customMap.rows : Math.ceil(dimensions.height / tileSize);
@@ -353,8 +341,8 @@ export default function ServerRoomMap({
                   let imgSrc = "";
                   if (customMap) {
                     const tileId = customMap.tiles[r]?.[c] || "00";
-                    const asset = TILE_ASSETS.find(t => t.id === tileId);
-                    imgSrc = asset ? asset.src : null;
+                    const asset = tileAssets.find(t => t.tileId === tileId);
+                    imgSrc = asset ? asset.image : null;
                   } else {
                     // Corners
                     if (r === 0 && c === 0) {
@@ -405,7 +393,7 @@ export default function ServerRoomMap({
                 }
               }
               return tiles;
-            })()}
+            }, [customMap, dimensions])}
           </div>
           
           {/* Ambient Room Lighting */}
@@ -485,7 +473,7 @@ export default function ServerRoomMap({
                       Press 'E' to place
                     </span>
                     <img 
-                      src={`/cats/cat-${heldCat.rarity.toLowerCase()}.png`} 
+                      src={heldCat.image || `/cats/cat-${heldCat.rarity.toLowerCase()}.png`} 
                       alt="Held Cat" 
                       className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
                     />

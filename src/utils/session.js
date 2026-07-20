@@ -19,13 +19,15 @@ const setCookie = (name, value, days = 7) => {
     date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
     expires = `; expires=${date.toUTCString()}`;
   }
-  // Store securely using Lax (CSRF protection) and Secure (HTTPS only) flags
-  document.cookie = `${name}=${value || ""}${expires}; path=/; SameSite=Lax; Secure`;
+  // Store securely using Lax (CSRF protection) and Secure (HTTPS only) flags conditionally
+  const isSecure = window.location.protocol === "https:";
+  document.cookie = `${name}=${value || ""}${expires}; path=/; SameSite=Lax${isSecure ? "; Secure" : ""}`;
 };
 
 const deleteCookie = (name) => {
   if (typeof window === "undefined") return;
-  document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure`;
+  const isSecure = window.location.protocol === "https:";
+  document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax${isSecure ? "; Secure" : ""}`;
 };
 
 export const getSession = () => {

@@ -9,6 +9,7 @@ export default function CodeEditor({
   isRunning,
   editorRef,
   onClose,
+  description,
   isFullScreen = false
 }) {
   return (
@@ -16,21 +17,21 @@ export default function CodeEditor({
       {/* Header Info Bar */}
       <div className="flex items-center justify-between px-3 py-2 bg-[#17181a] border-b border-zinc-800 select-none">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[11px] font-semibold tracking-wide text-zinc-400">main.js (TERMINAL EDITOR)</span>
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+          <span className="text-[11px] font-bold tracking-wide text-zinc-400">main.js (เครื่องมือแก้ไขโค้ด)</span>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={onRun}
             disabled={isRunning}
-            className="bg-emerald-500 hover:bg-emerald-400 text-[#17181a] px-3.5 py-0.5 rounded text-[11px] font-bold active:scale-95 transition-all"
+            className="bg-rose-600 hover:bg-rose-500 text-white px-4 py-0.5 rounded text-[11px] font-bold active:scale-95 transition-all"
           >
-            {isRunning ? "Verifying..." : "RUN"}
+            {isRunning ? "กำลังตรวจสอบ..." : "รันระบบ"}
           </button>
           <button
             onClick={onClose}
             className="text-xs text-zinc-500 hover:text-rose-400 transition-colors"
-            title="Minimize"
+            title="ย่อขนาด"
           >
             ✕
           </button>
@@ -38,8 +39,16 @@ export default function CodeEditor({
       </div>
 
       {/* Decryption Instruction Banner */}
-      <div className="bg-[#1e293b] border-b border-zinc-800 px-3 py-1.5 text-[10px] text-emerald-400 select-none">
-        💡 <span className="font-bold text-white">TASK:</span> Write a function <code className="bg-black/35 px-1.5 py-0.5 rounded text-emerald-300">getPassword(char)</code> that repeats the input character <span className="font-bold text-white underline">6 times</span>. (e.g. if input is <code className="text-white">"K"</code>, return <code className="text-emerald-300">"KKKKKK"</code>)
+      <div className="bg-[#1b2b40]/80 backdrop-blur border-b border-zinc-800/80 px-4 py-2.5 text-xs text-emerald-450 select-none flex items-start gap-2">
+        <span className="text-sm">💡</span>
+        <div>
+          <span className="font-black text-zinc-100 uppercase tracking-wider text-[9px] bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded mr-2">
+            ภารกิจถอดรหัส
+          </span>
+          <span className="text-zinc-300 font-sans leading-relaxed text-xs">
+            {description}
+          </span>
+        </div>
       </div>
 
       {/* Code Input Area */}
