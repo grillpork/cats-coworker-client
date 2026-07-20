@@ -68,6 +68,7 @@ export function DecryptionGameContent() {
 
   const [selectedRoomObj, setSelectedRoomObj] = useState(null);
   const [loadingRoom, setLoadingRoom] = useState(true);
+  const [myAssignedSlotIndex, setMyAssignedSlotIndex] = useState(0);
 
   // Load room details from database on mount or search param change
   useEffect(() => {
@@ -177,7 +178,6 @@ export function DecryptionGameContent() {
   const [spPoints, setSpPoints] = useState(0);
   const [deployedCats, setDeployedCats] = useState(Array(48).fill(null));
   const [accumulatedSp, setAccumulatedSp] = useState(Array(48).fill(0));
-  const [myAssignedSlotIndex, setMyAssignedSlotIndex] = useState(0);
   const [inventory, setInventory] = useState([]);
   const [catPool, setCatPool] = useState([]);
   const [heldCat, setHeldCat] = useState(null);
