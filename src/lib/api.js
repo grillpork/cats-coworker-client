@@ -1,8 +1,17 @@
 import axios from "axios";
 import { getSession, clearSession } from "../utils/session";
 
+const getBaseURL = () => {
+    if (typeof window !== "undefined") {
+        if (window.location.hostname === "catako.site" || window.location.hostname === "catako.site") {
+            return "https://backend-catako.site";
+        }
+    }
+    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+};
+
 export const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    baseURL: getBaseURL(),
     headers: {
         "Content-Type": "application/json",
         Accept: "application/json"
