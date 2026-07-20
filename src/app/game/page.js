@@ -1282,15 +1282,71 @@ export function DecryptionGameContent() {
   );
 }
 
+// Error Boundary to catch and display actual runtime errors
+class GameErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    this.setState({ errorInfo });
+    console.error("🔴 Game Page Error Boundary caught:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-screen h-screen bg-[#0a0b0d] text-slate-100 font-sans flex flex-col items-center justify-center gap-6 p-8">
+          <div className="text-4xl">🔴</div>
+          <h1 className="text-xl font-black text-red-400">เกิดข้อผิดพลาดในหน้าเกม</h1>
+          <div className="max-w-2xl w-full bg-zinc-900 border border-zinc-800 rounded-xl p-6 overflow-auto max-h-[60vh]">
+            <p className="text-xs font-mono text-red-400 mb-3 font-bold">Error Message:</p>
+            <pre className="text-xs font-mono text-zinc-300 whitespace-pre-wrap break-words mb-4">
+              {this.state.error?.toString()}
+            </pre>
+            <p className="text-xs font-mono text-red-400 mb-3 font-bold">Component Stack:</p>
+            <pre className="text-[10px] font-mono text-zinc-500 whitespace-pre-wrap break-words">
+              {this.state.errorInfo?.componentStack}
+            </pre>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition-all"
+            >
+              Reload Page
+            </button>
+            <button
+              onClick={() => window.location.href = "/"}
+              className="px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl text-xs transition-all"
+            >
+              กลับหน้าหลัก
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function DecryptionGame() {
   return (
-    <Suspense fallback={
-      <div className="w-screen h-screen bg-[#0a0b0d] text-slate-100 font-sans flex flex-col items-center justify-center gap-4">
-        <div className="w-10 h-10 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs font-mono text-zinc-500 tracking-wider">LOADING INTERFACE...</p>
-      </div>
-    }>
-      <DecryptionGameContent />
-    </Suspense>
+    <GameErrorBoundary>
+      <Suspense fallback={
+        <div className="w-screen h-screen bg-[#0a0b0d] text-slate-100 font-sans flex flex-col items-center justify-center gap-4">
+          <div className="w-10 h-10 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-mono text-zinc-500 tracking-wider">LOADING INTERFACE...</p>
+        </div>
+      }>
+        <DecryptionGameContent />
+      </Suspense>
+    </GameErrorBoundary>
   );
 }
