@@ -23,6 +23,44 @@ const CAT_POOL = [
   { name: "Sphynx Cat", rarity: "RARE", type: "diamond", spRate: 20 },
 ];
 
+const playSoundEffect = (type) => {
+  if (typeof window === "undefined") return;
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    if (type === "pickup") {
+      // Ascending short bleep (cute pickup sound)
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+      osc.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.15); // C6
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.15);
+    } else if (type === "place") {
+      // Descending triangle bump (solid place sound)
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.linearRampToValueAtTime(293.66, ctx.currentTime + 0.2); // D4
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.2);
+    }
+  } catch (e) {
+    // Ignore audio context errors
+  }
+};
+
 export default function DecryptionGame() {
   const { isAuthenticated, user, logout } = useAuth();
   const router = useRouter();
@@ -170,6 +208,7 @@ export default function DecryptionGame() {
     setHeldCat(catToHold);
     setInventory(nextInv);
     setShowInventoryModal(false);
+    playSoundEffect("pickup");
 
     setConsoleHistory((prev) => [
       ...prev,
@@ -185,6 +224,7 @@ export default function DecryptionGame() {
     nextSlots[slotIdx] = heldCat;
     setDeployedCats(nextSlots);
     setHeldCat(null);
+    playSoundEffect("place");
 
     setConsoleHistory((prev) => [
       ...prev,
@@ -206,6 +246,34 @@ export default function DecryptionGame() {
       ...prev,
       { type: "sys", text: `Recalled ${cat.name} back to inventory.` }
     ]);
+  };
+
+  // Pickup cat from desk to head
+  const handlePickupCat = (slotIdx) => {
+    const cat = deployedCats[slotIdx];
+    if (!cat) return;
+
+    const nextSlots = [...deployedCats];
+    if (heldCat) {
+      // Swap
+      nextSlots[slotIdx] = heldCat;
+      setHeldCat(cat);
+      setDeployedCats(nextSlots);
+      playSoundEffect("pickup");
+      setConsoleHistory((prev) => [
+        ...prev,
+        { type: "sys", text: `Swapped. Now holding ${cat.name}.` }
+      ]);
+    } else {
+      nextSlots[slotIdx] = null;
+      setHeldCat(cat);
+      setDeployedCats(nextSlots);
+      playSoundEffect("pickup");
+      setConsoleHistory((prev) => [
+        ...prev,
+        { type: "sys", text: `Picked up ${cat.name} to head.` }
+      ]);
+    }
   };
 
   const handleUpgradeCat = (invIdx) => {
@@ -564,6 +632,7 @@ export default function DecryptionGame() {
         onUpgradeSlot={handleUpgradeDeployedCat}
         onMoveSlot={handleMoveSlot}
         onPlaceCat={handlePlaceCat}
+        onPickupCat={handlePickupCat}
         onSlotClick={handleRecallCat}
         cipherText={formattedCipherText}
         subText={subText}
@@ -796,6 +865,23 @@ export default function DecryptionGame() {
 
       {/* 4. Bottom Custom Retro Leather Toolbar (z-20) */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-20 w-[600px] h-24 bg-[#5c4033] border-t-4 border-x-4 border-[#3e2723] rounded-t-2xl px-6 py-3 flex items-center justify-between gap-4 shadow-[0_-8px_24px_rgba(0,0,0,0.5)]">
+        {/* Decorative cats peaking over the edge */}
+        <div className="absolute -top-9 left-6 right-6 flex justify-around select-none z-10">
+          {inventory.slice(0, 5).map((cat, i) => {
+            return (
+              <img 
+                key={cat.id || i}
+                src={`/cats/cat-${cat.rarity.toLowerCase()}.png`}
+                alt={cat.name}
+                className="w-10 h-10 object-contain drop-shadow-[0_-4px_6px_rgba(0,0,0,0.6)] animate-pulse cursor-pointer hover:scale-110 active:scale-95 transition-all"
+                style={{ animationDelay: `${i * 0.2}s` }}
+                onClick={() => handleSelectCat(i)}
+                title={`Click to hold ${cat.name}`}
+              />
+            );
+          })}
+        </div>
+
         {/* Center: Active Mode Box */}
         <div className="flex-1 h-full flex items-center justify-center overflow-hidden">
           {activeTab === "terminal" ? (

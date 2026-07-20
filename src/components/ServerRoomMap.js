@@ -94,6 +94,7 @@ export default function ServerRoomMap({
   subText,
   heldCat,
   onPlaceCat,
+  onPickupCat,
 }) {
   const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
   const [zoom, setZoom] = useState(1.0);
@@ -213,10 +214,10 @@ export default function ServerRoomMap({
     };
   }, [dimensions, customMap]);
 
-  // Handle 'E' key press to place held cat
+  // Handle 'E' key press to place or pickup/swap held cat
   useEffect(() => {
     const handlePlaceKeyPress = (e) => {
-      if (e.key.toLowerCase() === 'e' && heldCat && onPlaceCat) {
+      if (e.key.toLowerCase() === 'e') {
         // Find closest slot
         let closestSlotIdx = -1;
         let minDistance = Infinity;
@@ -233,9 +234,12 @@ export default function ServerRoomMap({
           }
         }
 
-        // 80px radius for interaction. Must be empty slot.
+        // 80px radius for interaction.
         if (minDistance < 80 && closestSlotIdx !== -1) {
-          if (!deployedCats[closestSlotIdx]) {
+          const hasCat = !!deployedCats[closestSlotIdx];
+          if (hasCat && onPickupCat) {
+            onPickupCat(closestSlotIdx);
+          } else if (!hasCat && heldCat && onPlaceCat) {
             onPlaceCat(closestSlotIdx);
           }
         }
@@ -244,7 +248,7 @@ export default function ServerRoomMap({
 
     window.addEventListener("keydown", handlePlaceKeyPress);
     return () => window.removeEventListener("keydown", handlePlaceKeyPress);
-  }, [heldCat, playerPos, deployedCats, onPlaceCat]);
+  }, [heldCat, playerPos, deployedCats, onPlaceCat, onPickupCat]);
 
   const mapW = customMap ? customMap.cols * 48 : dimensions.width;
   const mapH = customMap ? customMap.rows * 48 : dimensions.height;
@@ -451,26 +455,54 @@ export default function ServerRoomMap({
           </div>
 
           {/* Player Character */}
-          <div
-            className="absolute transition-all duration-75 ease-out select-none z-10 flex flex-col items-center"
-            style={{
-              left: playerPos.x,
-              top: playerPos.y - (heldCat ? 30 : 0), // Adjust top to make room for held cat if needed
-              width: playerSize,
-              height: playerSize + (heldCat ? 30 : 0),
-            }}
-          >
-            {heldCat && (
-              <div className="absolute -top-10 animate-bounce">
-                <img 
-                  src={`/cats/cat-${heldCat.rarity.toLowerCase()}.png`} 
-                  alt="Held Cat" 
-                  className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
-                />
+          {(() => {
+            const playerCenterX = playerPos.x + playerSize / 2;
+            const playerCenterY = playerPos.y + playerSize / 2;
+            let nearSlotIdx = -1;
+            let minDistance = Infinity;
+            for (let i = 0; i < 6; i++) {
+              const center = getDeskCenter(i);
+              const dist = Math.hypot(playerCenterX - center.x, playerCenterY - center.y);
+              if (dist < 80 && dist < minDistance) {
+                minDistance = dist;
+                nearSlotIdx = i;
+              }
+            }
+
+            return (
+              <div
+                className="absolute transition-all duration-75 ease-out select-none z-10 flex flex-col items-center"
+                style={{
+                  left: playerPos.x,
+                  top: playerPos.y - (heldCat ? 30 : 0),
+                  width: playerSize,
+                  height: playerSize + (heldCat ? 30 : 0),
+                }}
+              >
+                {heldCat ? (
+                  <div className="absolute -top-16 flex flex-col items-center animate-bounce">
+                    <span className="text-[8px] bg-black/80 text-white px-2 py-0.5 rounded-full mb-0.5 whitespace-nowrap border border-zinc-700 font-mono drop-shadow-md">
+                      Press 'E' to place
+                    </span>
+                    <img 
+                      src={`/cats/cat-${heldCat.rarity.toLowerCase()}.png`} 
+                      alt="Held Cat" 
+                      className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+                    />
+                  </div>
+                ) : (
+                  nearSlotIdx !== -1 && deployedCats[nearSlotIdx] && (
+                    <div className="absolute -top-8 flex flex-col items-center animate-pulse">
+                      <span className="text-[8px] bg-black/80 text-white px-2 py-0.5 rounded-full whitespace-nowrap border border-zinc-700 font-mono drop-shadow-md">
+                        Press 'E' to pick up
+                      </span>
+                    </div>
+                  )
+                )}
+                <img src="/mc-00.png" alt="Main Character" className="w-14 h-14 object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.5)] mt-auto" />
               </div>
-            )}
-            <img src="/mc-00.png" alt="Main Character" className="w-14 h-14 object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.5)] mt-auto" />
-          </div>
+            );
+          })()}
         </div>
       </div>
 
