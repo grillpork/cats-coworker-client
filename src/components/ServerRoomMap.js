@@ -84,6 +84,7 @@ export default function ServerRoomMap({
 }) {
   const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
   const [zoom, setZoom] = useState(1.0);
+  const [myAssignedSlotIndex, setMyAssignedSlotIndex] = useState(0);
   const playerSize = 48;
   const coinSize = 24;
 
@@ -173,7 +174,19 @@ export default function ServerRoomMap({
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === "players_list") {
+        if (data.type === "joined_room") {
+          if (data.slotIndex !== undefined) {
+            setMyAssignedSlotIndex(data.slotIndex);
+          }
+          const initial = {};
+          (data.players || []).forEach(p => {
+            initial[p.id] = p;
+          });
+          setOtherPlayers(initial);
+        } else if (data.type === "room_full") {
+          alert("❌ " + (data.reason || "ห้องเซิร์ฟเวอร์นี้เต็มแล้ว (จำกัด 6 คน)"));
+          window.location.href = "/";
+        } else if (data.type === "players_list") {
           const initial = {};
           data.players.forEach(p => {
             initial[p.id] = p;
@@ -314,6 +327,14 @@ export default function ServerRoomMap({
 
         // 80px radius for interaction.
         if (minDistance < 80 && closestSlotIdx !== -1) {
+          // Verify ownership before interaction
+          if (closestSlotIdx !== myAssignedSlotIndex) {
+            const otherOwner = Object.values(otherPlayers).find(p => p.slotIndex === closestSlotIdx);
+            const ownerName = otherOwner ? otherOwner.username : `Player ${closestSlotIdx + 1}`;
+            alert(`⛔ นี่คือพื้นที่ของเพื่อน (${ownerName}) ไม่สามารถยุ่งกับแมวหรือพื้นที่ของผู้อื่นได้!`);
+            return;
+          }
+
           const hasCat = !!deployedCats[closestSlotIdx];
           if (hasCat && onPickupCat) {
             onPickupCat(closestSlotIdx);
@@ -326,7 +347,7 @@ export default function ServerRoomMap({
 
     window.addEventListener("keydown", handlePlaceKeyPress);
     return () => window.removeEventListener("keydown", handlePlaceKeyPress);
-  }, [heldCat, playerPos, deployedCats, onPlaceCat, onPickupCat]);
+  }, [heldCat, playerPos, deployedCats, onPlaceCat, onPickupCat, myAssignedSlotIndex, otherPlayers]);
 
   const mapW = customMap ? customMap.cols * 48 : dimensions.width;
   const mapH = customMap ? customMap.rows * 48 : dimensions.height;
@@ -363,12 +384,13 @@ export default function ServerRoomMap({
     const playerCenterY = playerPos.y + playerSize / 2;
 
     for (let i = 0; i < 6; i++) {
-      if (accumulatedSp[i] > 0) {
+      // ONLY harvest if the desk is the player's OWN assigned slot!
+      if (i === myAssignedSlotIndex && accumulatedSp[i] > 0) {
         const center = getDeskCenter(i);
         const dist = Math.sqrt(
           Math.pow(playerCenterX - center.x, 2) + Math.pow(playerCenterY - center.y, 2)
         );
-        // Harvest if player is within range (e.g. 85px) of the desk center
+        // Harvest if player is within range (e.g. 85px) of their desk center
         if (dist < 85) {
           onHarvestSP(i, accumulatedSp[i]);
           playCoinSound();
@@ -514,15 +536,18 @@ export default function ServerRoomMap({
           <div 
             className="absolute z-5"
             style={{
-              left: `${mapW / 2 - 250}px`,
+              left: `${mapW / 2 - 320}px`,
               top: `${mapH / 2 - 150}px`,
-              width: "500px",
+              width: "640px",
             }}
           >
             <CatWorkingGrid
               slots={deployedCats}
               accumulatedSp={accumulatedSp}
               spPoints={spPoints}
+              myAssignedSlotIndex={myAssignedSlotIndex}
+              otherPlayers={otherPlayers}
+              user={user}
               onSlotClick={onSlotClick}
               onUpgradeSlot={onUpgradeSlot}
               onMoveSlot={onMoveSlot}

@@ -18,17 +18,25 @@ export default function LobbyPage() {
   const [newRoomName, setNewRoomName] = useState("");
   const [creatingRoom, setCreatingRoom] = useState(false);
 
-  // Load rooms and templates from database on mount
-  useEffect(() => {
-    const fetchRoomsAndTemplates = async () => {
-      try {
-        const roomsRes = await mapService.getRooms();
-        const rooms = roomsRes?.data || roomsRes || [];
-        setAvailableRooms(rooms);
-        if (rooms.length > 0) {
-          setSelectedRoomObj(rooms[0]);
-        }
+  const fetchRooms = async () => {
+    try {
+      const roomsRes = await mapService.getRooms();
+      const rooms = roomsRes?.data || roomsRes || [];
+      setAvailableRooms(rooms);
+      setSelectedRoomObj((prev) => {
+        if (!prev && rooms.length > 0) return rooms[0];
+        const found = rooms.find((r) => r.id === prev?.id);
+        return found || (rooms.length > 0 ? rooms[0] : null);
+      });
+    } catch (err) {
+      console.error("Failed to load rooms from database:", err);
+    }
+  };
 
+  // Load rooms and templates from database on mount & poll every 3 seconds
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
         const templatesRes = await mapService.getAllMaps();
         const templates = templatesRes?.data || templatesRes || [];
         setMapTemplates(templates);
@@ -36,10 +44,15 @@ export default function LobbyPage() {
           setSelectedMapTemplateId(String(templates[0].id));
         }
       } catch (err) {
-        console.error("Failed to load rooms/templates from database:", err);
+        console.error("Failed to load map templates:", err);
       }
     };
-    fetchRoomsAndTemplates();
+
+    fetchTemplates();
+    fetchRooms();
+
+    const interval = setInterval(fetchRooms, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleCreateRoom = async () => {
@@ -120,6 +133,9 @@ export default function LobbyPage() {
 
   const handleJoinRoom = () => {
     if (!selectedRoomObj) return alert("กรุณาเลือกห้องที่ต้องการเข้าร่วม");
+    if (selectedRoomObj.playerCount >= 6) {
+      return alert("ห้องเซิร์ฟเวอร์นี้เต็มแล้ว (จำกัดผู้เล่นไม่เกิน 6 คน)");
+    }
     setShowRoomModal(false);
     router.push(`/game?roomId=${selectedRoomObj.id}`);
   };
@@ -184,7 +200,10 @@ export default function LobbyPage() {
         {/* Action buttons */}
         <div className="flex flex-col w-full gap-3">
           <button
-            onClick={() => setShowRoomModal(true)}
+            onClick={() => {
+              fetchRooms();
+              setShowRoomModal(true);
+            }}
             className="w-full py-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-black text-sm uppercase tracking-wider rounded-xl shadow-[0_4px_20px_rgba(244,63,94,0.3)] hover:shadow-[0_4px_25px_rgba(244,63,94,0.45)] hover:scale-[1.02] active:scale-95 transition-all cursor-pointer border border-rose-500/30"
           >
             🚀 เข้าสู่ห้องเซิร์ฟเวอร์ (Enter Server Room)
@@ -218,12 +237,21 @@ export default function LobbyPage() {
       {showRoomModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
           <div className="bg-[#101114] border border-zinc-800 rounded-2xl p-6 max-w-sm w-full mx-4 flex flex-col gap-5 shadow-[0_0_50px_rgba(0,0,0,0.8)] font-sans">
-            <div className="flex flex-col gap-1.5 text-center">
-              <h2 className="text-lg font-black text-slate-100 uppercase tracking-wider flex items-center justify-center gap-2">
-                🚪 เลือก Server Room
-              </h2>
-              <p className="text-[10px] text-zinc-500">
-                เลือกห้องเซิร์ฟเวอร์ที่คุณต้องการเข้าไปมีส่วนร่วมกับผู้อื่น (ดึงจากฐานข้อมูลจริง)
+            <div className="flex flex-col gap-1.5 text-center relative">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-black text-slate-100 uppercase tracking-wider flex items-center gap-2">
+                  🚪 เลือก Server Room
+                </h2>
+                <button
+                  onClick={fetchRooms}
+                  className="text-[10px] text-zinc-400 hover:text-white bg-zinc-850 hover:bg-zinc-800 px-2 py-1 rounded-md border border-zinc-750 transition-all flex items-center gap-1 active:scale-95 cursor-pointer"
+                  title="รีเฟรชรายการห้องเซิร์ฟเวอร์"
+                >
+                  🔄 รีเฟรช
+                </button>
+              </div>
+              <p className="text-[10px] text-zinc-500 text-left">
+                เลือกห้องเซิร์ฟเวอร์ที่คุณต้องการเข้าไปมีส่วนร่วมกับเพื่อนๆ (อัปเดตแบบเรียลไทม์)
               </p>
             </div>
 
@@ -250,14 +278,22 @@ export default function LobbyPage() {
                     >
                       <div className="flex flex-col gap-0.5">
                         <span className="text-slate-200 font-bold">{room.name}</span>
-                        <span className="text-[10px] text-zinc-500 font-normal">
-                          แผนที่: {room.map?.name || "แผนที่ปกติ"}
-                        </span>
+                        <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-normal">
+                          <span>โฮสต์: <strong className="text-zinc-400">{room.hostUsername || "ไม่ระบุ"}</strong></span>
+                          <span>&bull;</span>
+                          <span>แผนที่: {room.map?.name || "แผนที่ปกติ"}</span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-emerald-400 font-mono">
-                          {room.playerCount || 0}/{room.maxPlayers || 10} คน
-                        </span>
+                        {room.playerCount >= 6 ? (
+                          <span className="text-[10px] text-red-400 font-bold font-mono px-1.5 py-0.5 bg-red-950/60 border border-red-900/50 rounded">
+                            เต็ม (6/6)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-emerald-400 font-mono">
+                            {room.playerCount || 0} / 6 คน
+                          </span>
+                        )}
                         {selectedRoomObj?.id === room.id && (
                           <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
                         )}
