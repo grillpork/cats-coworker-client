@@ -72,7 +72,7 @@ export function CatComputerSVG({ color = "#4ade80", type = "standard" }) {
 
 export default function CatWorkingGrid({
   slots = [],
-  accumulatedSp = [0, 0, 0, 0, 0, 0],
+  accumulatedSp = Array(48).fill(0),
   spPoints = 0,
   myAssignedSlotIndex = 0,
   otherPlayers = {},
@@ -86,175 +86,180 @@ export default function CatWorkingGrid({
   subText = "X - Y",
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 select-none">
-      {/* 6 Pre-allocated Plot Areas Grid (3 columns x 2 rows matching mockup) */}
-      <div className="grid grid-cols-3 gap-6 max-w-2xl w-full mt-2">
-        {Array.from({ length: 6 }).map((_, idx) => {
-          const cat = slots[idx];
-          const isSelf = idx === myAssignedSlotIndex;
+    <div className="flex flex-col items-center gap-4 select-none w-full">
+      {/* 6 Pre-allocated Player Zones Grid (3 columns x 2 rows) */}
+      <div className="grid grid-cols-3 gap-8 max-w-6xl w-full mt-2">
+        {Array.from({ length: 6 }).map((_, zoneIdx) => {
+          const isSelf = zoneIdx === myAssignedSlotIndex;
           
-          let ownerName = "สำรอง (Free)";
+          let ownerName = "สำรอง (Free Zone)";
           let isOccupied = false;
 
           if (isSelf) {
             ownerName = user?.username || user?.email?.split('@')[0] || "คุณ";
             isOccupied = true;
           } else {
-            const playerInSlot = Object.values(otherPlayers).find(p => p.slotIndex === idx);
-            if (playerInSlot) {
-              ownerName = playerInSlot.username;
+            const playerInZone = Object.values(otherPlayers).find(p => p.slotIndex === zoneIdx);
+            if (playerInZone) {
+              ownerName = playerInZone.username;
               isOccupied = true;
             }
           }
 
-          const handleProtectedClick = () => {
-            if (!isSelf) {
-              alert(`⛔ นี่คือพื้นที่ของเพื่อน (${ownerName}) ไม่สามารถยุ่งกับแมวหรือพื้นที่ของผู้อื่นได้!`);
-              return;
-            }
-            if (onSlotClick) onSlotClick(idx);
-          };
-
           return (
             <div
-              key={idx}
-              className={`relative p-2.5 rounded-2xl border-4 transition-all flex flex-col items-center justify-between ${
+              key={zoneIdx}
+              className={`relative p-3 rounded-2xl border-4 transition-all flex flex-col items-center justify-between shadow-2xl ${
                 isSelf
-                  ? "border-emerald-500/80 bg-emerald-950/30 shadow-[0_0_25px_rgba(16,185,129,0.3)]"
+                  ? "border-emerald-500/80 bg-emerald-950/35 shadow-[0_0_30px_rgba(16,185,129,0.3)]"
                   : isOccupied
-                  ? "border-blue-500/70 bg-blue-950/25 shadow-[0_0_20px_rgba(59,130,246,0.25)]"
-                  : "border-[#8B5A2B]/80 bg-[#3a2818]/40 shadow-inner"
+                  ? "border-blue-500/70 bg-blue-950/30 shadow-[0_0_25px_rgba(59,130,246,0.25)]"
+                  : "border-[#8B5A2B]/90 bg-[#3a2818]/60 shadow-inner"
               }`}
             >
-              {/* Plot Owner Badge Header */}
-              <div className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold tracking-wider mb-1.5 flex items-center gap-1 border shadow-md ${
+              {/* Zone Header Badge */}
+              <div className={`px-3 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider mb-2 flex items-center gap-1.5 border shadow-lg ${
                 isSelf
-                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/60"
+                  ? "bg-emerald-500/25 text-emerald-300 border-emerald-500/60"
                   : isOccupied
-                  ? "bg-blue-500/20 text-blue-300 border-blue-500/60"
-                  : "bg-zinc-900/80 text-zinc-400 border-zinc-700/60"
+                  ? "bg-blue-500/25 text-blue-300 border-blue-500/60"
+                  : "bg-zinc-900/90 text-zinc-400 border-zinc-700/60"
               }`}>
                 <span>{isSelf ? "🟢" : isOccupied ? "🔵" : "⚪"}</span>
-                <span>Plot {idx + 1}: <strong>{ownerName}</strong></span>
-                {isSelf && <span className="text-[7px] text-emerald-400 font-extrabold">(คุณ)</span>}
+                <span>Zone {zoneIdx + 1}: <strong>{ownerName}</strong> (8 โต๊ะ)</span>
+                {isSelf && <span className="text-[8px] text-emerald-400 font-extrabold">(โซนของคุณ)</span>}
               </div>
 
-              {/* Working Slot / Desk */}
-              <div
-                onClick={handleProtectedClick}
-                draggable={cat && isSelf ? "true" : "false"}
-                onDragStart={(e) => {
-                  if (!isSelf) {
-                    e.preventDefault();
-                    return;
-                  }
-                  e.dataTransfer.setData("sourceSlotIdx", idx.toString());
-                }}
-                onDragOver={(e) => {
-                  if (isSelf) e.preventDefault();
-                }}
-                onDrop={(e) => {
-                  if (!isSelf) {
-                    alert(`⛔ นี่คือพื้นที่ของเพื่อน (${ownerName}) ไม่สามารถวางแมวในพื้นที่ผู้อื่นได้!`);
-                    return;
-                  }
-                  e.preventDefault();
-                  const sourceSlotStr = e.dataTransfer.getData("sourceSlotIdx");
-                  const sourceInvStr = e.dataTransfer.getData("sourceInvIdx");
-                  if (sourceSlotStr) {
-                    const srcIdx = parseInt(sourceSlotStr, 10);
-                    if (srcIdx !== idx && onMoveSlot) {
-                      onMoveSlot(srcIdx, idx);
+              {/* 8 Inner Floor Desks (2 rows x 4 columns matching user's mockup image with red/pink floor tiles) */}
+              <div className="grid grid-cols-4 gap-2 w-full p-2 bg-[#b2533e]/20 border-2 border-[#b2533e]/50 rounded-xl">
+                {Array.from({ length: 8 }).map((_, subIdx) => {
+                  const globalSlotIdx = zoneIdx * 8 + subIdx;
+                  const cat = slots[globalSlotIdx];
+
+                  const handleProtectedClick = () => {
+                    if (!isSelf) {
+                      alert(`⛔ นี่คือพื้นที่ Zone ${zoneIdx + 1} ของเพื่อน (${ownerName}) ไม่สามารถยุ่งกับแมวหรือพื้นที่ของผู้อื่นได้!`);
+                      return;
                     }
-                  } else if (sourceInvStr) {
-                    const invIdx = parseInt(sourceInvStr, 10);
-                    if (onDeployToSlot) {
-                      onDeployToSlot(invIdx, idx);
-                    }
-                  }
-                }}
-                className={`w-full h-32 flex flex-col items-center justify-center relative p-1.5 rounded-xl border border-dashed transition-all ${
-                  isSelf
-                    ? "cursor-pointer hover:border-emerald-400/50 border-emerald-500/20"
-                    : "cursor-not-allowed border-zinc-800/40 opacity-90"
-                }`}
-              >
-                {cat ? (
-                  <>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[8px] font-mono font-bold tracking-wider text-zinc-400 uppercase">
-                        {cat.rarity}
-                      </span>
-                      <span className={`text-[9px] font-mono font-semibold ${
-                        cat.type === "diamond" ? "text-blue-400" : "text-emerald-400"
-                      }`}>
-                        {cat.type}
-                      </span>
-                    </div>
-                    
-                    {/* Cat & Computer Sprite */}
-                    <div className="flex items-end justify-center my-1 z-10">
-                      <img 
-                        src={getCatImage(cat)} 
-                        alt={cat.name} 
-                        className={`w-12 h-12 object-contain z-20 ${getAuraClass(cat.rarity)}`}
-                      />
-                      <img 
-                        src="/computer.png" 
-                        alt="computer" 
-                        className="w-11 h-11 object-contain z-10 -ml-3"
-                      />
-                    </div>
+                    if (onSlotClick) onSlotClick(globalSlotIdx);
+                  };
 
-                    <span className="text-[9px] font-mono text-zinc-400 mt-auto">
-                      {cat.spRate} SP/s (LV.{cat.level || 1})
-                    </span>
+                  return (
+                    <div
+                      key={globalSlotIdx}
+                      onClick={handleProtectedClick}
+                      draggable={cat && isSelf ? "true" : "false"}
+                      onDragStart={(e) => {
+                        if (!isSelf) {
+                          e.preventDefault();
+                          return;
+                        }
+                        e.dataTransfer.setData("sourceSlotIdx", globalSlotIdx.toString());
+                      }}
+                      onDragOver={(e) => {
+                        if (isSelf) e.preventDefault();
+                      }}
+                      onDrop={(e) => {
+                        if (!isSelf) {
+                          alert(`⛔ นี่คือพื้นที่ Zone ${zoneIdx + 1} ของเพื่อน (${ownerName}) ไม่สามารถวางแมวในพื้นที่ผู้อื่นได้!`);
+                          return;
+                        }
+                        e.preventDefault();
+                        const sourceSlotStr = e.dataTransfer.getData("sourceSlotIdx");
+                        const sourceInvStr = e.dataTransfer.getData("sourceInvIdx");
+                        if (sourceSlotStr) {
+                          const srcIdx = parseInt(sourceSlotStr, 10);
+                          if (srcIdx !== globalSlotIdx && onMoveSlot) {
+                            onMoveSlot(srcIdx, globalSlotIdx);
+                          }
+                        } else if (sourceInvStr) {
+                          const invIdx = parseInt(sourceInvStr, 10);
+                          if (onDeployToSlot) {
+                            onDeployToSlot(invIdx, globalSlotIdx);
+                          }
+                        }
+                      }}
+                      className={`h-24 flex flex-col items-center justify-between relative p-1 rounded-lg border border-dashed transition-all ${
+                        isSelf
+                          ? "cursor-pointer hover:border-emerald-400/60 border-emerald-500/30 bg-emerald-950/10"
+                          : "cursor-not-allowed border-zinc-800/40 opacity-90 bg-zinc-900/20"
+                      }`}
+                    >
+                      {cat ? (
+                        <>
+                          <div className="flex flex-col items-center leading-none mt-0.5">
+                            <span className="text-[7px] font-mono font-bold tracking-wider text-zinc-400 uppercase">
+                              {cat.rarity}
+                            </span>
+                            <span className={`text-[8px] font-mono font-semibold ${
+                              cat.type === "diamond" ? "text-blue-400" : "text-emerald-400"
+                            }`}>
+                              {cat.type}
+                            </span>
+                          </div>
+                          
+                          {/* Cat & Computer Sprite */}
+                          <div className="flex items-end justify-center my-0.5 z-10">
+                            <img 
+                              src={getCatImage(cat)} 
+                              alt={cat.name} 
+                              className={`w-9 h-9 object-contain z-20 ${getAuraClass(cat.rarity)}`}
+                            />
+                            <img 
+                              src="/computer.png" 
+                              alt="computer" 
+                              className="w-8 h-8 object-contain z-10 -ml-2"
+                            />
+                          </div>
 
-                    {/* Harvest Bubble & Level Up Button side-by-side */}
-                    <div className="flex items-center gap-1.5 mt-1 z-20">
-                      {/* Accumulated SP Harvest Bubble */}
-                      <div className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold select-none transition-all ${
-                        (accumulatedSp[idx] || 0) > 0
-                          ? isSelf
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/35 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.15)]"
-                            : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/40"
-                          : "bg-zinc-800/40 text-zinc-600 border border-zinc-800/30"
-                      }`}>
-                        💰 {accumulatedSp[idx] || 0}
-                      </div>
+                          <span className="text-[7px] font-mono text-zinc-400 leading-none">
+                            {cat.spRate} SP/s (LV.{cat.level || 1})
+                          </span>
 
-                      {/* Level Up Button */}
-                      {isSelf && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation(); // prevent recalling cat
-                            const cost = (cat.level || 1) * 100;
-                            if (onUpgradeSlot && spPoints >= cost) {
-                              onUpgradeSlot(idx);
-                            }
-                          }}
-                          disabled={spPoints < (cat.level || 1) * 100}
-                          className="px-1.5 py-0.5 bg-yellow-500 hover:bg-yellow-400 disabled:bg-zinc-800 disabled:text-zinc-650 text-zinc-950 hover:text-zinc-900 border border-yellow-400/40 disabled:border-transparent rounded text-[7px] font-black tracking-wide transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
-                          title={`Upgrade Level for ${(cat.level || 1) * 100} SP`}
-                        >
-                          LV+ ({(cat.level || 1) * 100})
-                        </button>
+                          {/* Harvest & Upgrade */}
+                          <div className="flex items-center gap-1 z-20 mb-0.5">
+                            <div className={`px-1 py-0.2 rounded text-[7px] font-mono font-bold select-none ${
+                              (accumulatedSp[globalSlotIdx] || 0) > 0
+                                ? isSelf
+                                  ? "bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 animate-pulse"
+                                  : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/40"
+                                : "bg-zinc-800/40 text-zinc-600"
+                            }`}>
+                              💰{accumulatedSp[globalSlotIdx] || 0}
+                            </div>
+
+                            {isSelf && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const cost = (cat.level || 1) * 100;
+                                  if (onUpgradeSlot && spPoints >= cost) {
+                                    onUpgradeSlot(globalSlotIdx);
+                                  }
+                                }}
+                                disabled={spPoints < (cat.level || 1) * 100}
+                                className="px-1 py-0.2 bg-yellow-500 hover:bg-yellow-400 disabled:bg-zinc-800 text-zinc-950 rounded text-[6px] font-black cursor-pointer"
+                              >
+                                LV+
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full gap-0.5 opacity-60">
+                          <svg className="w-8 h-6" viewBox="0 0 64 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="4" y="28" width="56" height="4" fill="#a16207" rx="1" />
+                            <rect x="8" y="32" width="3" height="8" fill="#78350f" />
+                            <rect x="53" y="32" width="3" height="8" fill="#78350f" />
+                          </svg>
+                          <span className="text-[6px] font-mono text-zinc-400">
+                            {isSelf ? `โต๊ะ ${subIdx + 1}` : "ว่าง"}
+                          </span>
+                        </div>
                       )}
                     </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center gap-1 opacity-55 hover:opacity-100 transition-opacity">
-                    {/* Empty desk display representation */}
-                    <svg className="w-14 h-10" viewBox="0 0 64 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="4" y="28" width="56" height="4" fill="#a16207" rx="1" />
-                      <rect x="8" y="32" width="3" height="8" fill="#78350f" />
-                      <rect x="53" y="32" width="3" height="8" fill="#78350f" />
-                    </svg>
-                    <span className="text-[8px] font-mono text-zinc-400 italic">
-                      {isSelf ? "โต๊ะว่างของคุณ (กด E เพื่อวางแมว)" : `โต๊ะว่างของ ${ownerName}`}
-                    </span>
-                  </div>
-                )}
+                  );
+                })}
               </div>
             </div>
           );

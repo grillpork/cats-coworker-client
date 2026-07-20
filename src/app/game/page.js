@@ -128,7 +128,7 @@ export function DecryptionGameContent() {
     if (isAuthenticated) {
       loadPlacements();
     } else {
-      setDeployedCats([null, null, null, null, null, null]);
+      setDeployedCats(Array(48).fill(null));
     }
   }, [isAuthenticated]);
 
@@ -173,8 +173,8 @@ export function DecryptionGameContent() {
   const [activeTab, setActiveTab] = useState("shop"); // "terminal", "shop"
   const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [spPoints, setSpPoints] = useState(0);
-  const [deployedCats, setDeployedCats] = useState([null, null, null, null, null, null]);
-  const [accumulatedSp, setAccumulatedSp] = useState([0, 0, 0, 0, 0, 0]);
+  const [deployedCats, setDeployedCats] = useState(Array(48).fill(null));
+  const [accumulatedSp, setAccumulatedSp] = useState(Array(48).fill(0));
   const [inventory, setInventory] = useState([]);
   const [catPool, setCatPool] = useState([]);
   const [heldCat, setHeldCat] = useState(null);
@@ -730,7 +730,7 @@ export function DecryptionGameContent() {
         subText={subText}
         heldCat={heldCat}
         user={user}
-        room={selectedRoomObj?.name}
+        room={selectedRoomObj?.name || (roomId ? `Room-${roomId}` : "Server Room A")}
         selectedMap={selectedRoomObj}
       />
 

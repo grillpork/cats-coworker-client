@@ -82,7 +82,7 @@ export default function ServerRoomMap({
   room,
   selectedMap,
 }) {
-  const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
+  const [dimensions, setDimensions] = useState({ width: 1680, height: 1104 });
   const [zoom, setZoom] = useState(1.0);
   const [myAssignedSlotIndex, setMyAssignedSlotIndex] = useState(0);
   const playerSize = 48;
@@ -148,7 +148,7 @@ export default function ServerRoomMap({
 
   // WebSocket connection for real-time multiplayer
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !room) return;
 
     const isProd = window.location.hostname === "catako.site" || window.location.hostname === "catako.site";
     const wsUrl = isProd ? "wss://backend-catako.site" : "ws://localhost:4000";
@@ -165,7 +165,7 @@ export default function ServerRoomMap({
       ws.send(JSON.stringify({
         type: "join",
         user: identity,
-        room: room || "Server Room A",
+        room: room,
         x: playerPos.x,
         y: playerPos.y
       }));
@@ -227,7 +227,7 @@ export default function ServerRoomMap({
         ws.close();
       }
     };
-  }, [user]);
+  }, [user, room]);
 
   // Handle mouse scroll wheel zoom
   useEffect(() => {
@@ -316,7 +316,7 @@ export default function ServerRoomMap({
         const playerCenterX = playerPos.x + playerSize / 2;
         const playerCenterY = playerPos.y + playerSize / 2;
 
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 48; i++) {
           const center = getDeskCenter(i);
           const dist = Math.hypot(playerCenterX - center.x, playerCenterY - center.y);
           if (dist < minDistance) {
@@ -327,11 +327,12 @@ export default function ServerRoomMap({
 
         // 80px radius for interaction.
         if (minDistance < 80 && closestSlotIdx !== -1) {
-          // Verify ownership before interaction
-          if (closestSlotIdx !== myAssignedSlotIndex) {
-            const otherOwner = Object.values(otherPlayers).find(p => p.slotIndex === closestSlotIdx);
-            const ownerName = otherOwner ? otherOwner.username : `Player ${closestSlotIdx + 1}`;
-            alert(`⛔ นี่คือพื้นที่ของเพื่อน (${ownerName}) ไม่สามารถยุ่งกับแมวหรือพื้นที่ของผู้อื่นได้!`);
+          const targetZoneIdx = Math.floor(closestSlotIdx / 8);
+          // Verify zone ownership before interaction
+          if (targetZoneIdx !== myAssignedSlotIndex) {
+            const otherOwner = Object.values(otherPlayers).find(p => p.slotIndex === targetZoneIdx);
+            const ownerName = otherOwner ? otherOwner.username : `Player ${targetZoneIdx + 1}`;
+            alert(`⛔ นี่คือพื้นที่ Zone ${targetZoneIdx + 1} ของเพื่อน (${ownerName}) ไม่สามารถยุ่งกับแมวหรือพื้นที่ของผู้อื่นได้!`);
             return;
           }
 
@@ -354,16 +355,30 @@ export default function ServerRoomMap({
   const offsetX = customMap ? Math.max(0, (dimensions.width - mapW) / 2) : 0;
   const offsetY = customMap ? Math.max(0, (dimensions.height - mapH) / 2) : 0;
 
-  // Helper to compute center coordinates of each desk slot on the map canvas
-  const getDeskCenter = (idx) => {
-    const row = Math.floor(idx / 3);
-    const col = idx % 3;
-    const colWidth = 500 / 3;
-    const rowHeight = 112;
-    const gridTopOffset = 80;
-    const x = (mapW / 2 - 250) + col * colWidth + (colWidth / 2);
-    const y = (mapH / 2 - 150) + gridTopOffset + row * rowHeight + (rowHeight / 2);
-    return { x, y };
+  // Helper to compute center coordinates of each of the 48 desk slots across 6 zones
+  const getDeskCenter = (slotIdx) => {
+    const zoneIdx = Math.floor(slotIdx / 8);
+    const subIdx = slotIdx % 8;
+    const subRow = Math.floor(subIdx / 4);
+    const subCol = subIdx % 4;
+
+    const zones = [
+      { colStart: 3, rowStart: 3 },
+      { colStart: 14, rowStart: 3 },
+      { colStart: 25, rowStart: 3 },
+      { colStart: 3, rowStart: 13 },
+      { colStart: 14, rowStart: 13 },
+      { colStart: 25, rowStart: 13 },
+    ];
+
+    const z = zones[zoneIdx] || zones[0];
+    const tileCol = z.colStart + 1 + subCol;
+    const tileRow = z.rowStart + 1 + subRow;
+
+    return {
+      x: (tileCol + 0.5) * 48,
+      y: (tileRow + 0.5) * 48,
+    };
   };
 
   const [particles, setParticles] = useState([]);
@@ -378,19 +393,21 @@ export default function ServerRoomMap({
     }
   }, [particles]);
 
-  // Monitor player proximity to each desk to harvest accumulated SP
+  // Monitor player proximity to each desk to harvest accumulated SP for player's assigned zone (8 slots)
   useEffect(() => {
     const playerCenterX = playerPos.x + playerSize / 2;
     const playerCenterY = playerPos.y + playerSize / 2;
 
-    for (let i = 0; i < 6; i++) {
-      // ONLY harvest if the desk is the player's OWN assigned slot!
-      if (i === myAssignedSlotIndex && accumulatedSp[i] > 0) {
+    const startSlot = myAssignedSlotIndex * 8;
+    const endSlot = startSlot + 8;
+
+    for (let i = startSlot; i < endSlot; i++) {
+      if (accumulatedSp[i] > 0) {
         const center = getDeskCenter(i);
         const dist = Math.sqrt(
           Math.pow(playerCenterX - center.x, 2) + Math.pow(playerCenterY - center.y, 2)
         );
-        // Harvest if player is within range (e.g. 85px) of their desk center
+        // Harvest if player is within range (85px) of their desk center
         if (dist < 85) {
           onHarvestSP(i, accumulatedSp[i]);
           playCoinSound();
@@ -476,11 +493,45 @@ export default function ServerRoomMap({
                     } else if (c === mapCols - 1) {
                       imgSrc = "/map-box/map-box-08.png";
                     }
-                    // Floors
+                    // Floors and 6 Plot Fences (matching mockup image)
                     else {
-                      const seed = (r * 7 + c * 13) % 4;
-                      const floorNum = String(seed + 1).padStart(2, '0');
-                      imgSrc = `/map-box/map-box-${floorNum}.png`;
+                      const fenceTile = (() => {
+                        const plots = [
+                          { colStart: 2, colEnd: 7, rowStart: 2, rowEnd: 5 },
+                          { colStart: 9, colEnd: 14, rowStart: 2, rowEnd: 5 },
+                          { colStart: 16, colEnd: 21, rowStart: 2, rowEnd: 5 },
+                          { colStart: 2, colEnd: 7, rowStart: 9, rowEnd: 12 },
+                          { colStart: 9, colEnd: 14, rowStart: 9, rowEnd: 12 },
+                          { colStart: 16, colEnd: 21, rowStart: 9, rowEnd: 12 },
+                        ];
+                        for (const p of plots) {
+                          if (r >= p.rowStart && r <= p.rowEnd && c >= p.colStart && c <= p.colEnd) {
+                            const isTop = r === p.rowStart;
+                            const isBottom = r === p.rowEnd;
+                            const isLeft = c === p.colStart;
+                            const isRight = c === p.colEnd;
+                            if (isTop || isBottom || isLeft || isRight) {
+                              if (isTop && isLeft) return "/map-box/map-box-09.png";
+                              if (isTop && isRight) return "/map-box/map-box-10.png";
+                              if (isBottom && isLeft) return "/map-box/map-box-11.png";
+                              if (isBottom && isRight) return "/map-box/map-box-12.png";
+                              if (isTop) return "/map-box/map-box-05.png";
+                              if (isBottom) return "/map-box/map-box-06.png";
+                              if (isLeft) return "/map-box/map-box-07.png";
+                              if (isRight) return "/map-box/map-box-08.png";
+                            }
+                          }
+                        }
+                        return null;
+                      })();
+
+                      if (fenceTile) {
+                        imgSrc = fenceTile;
+                      } else {
+                        const seed = (r * 7 + c * 13) % 4;
+                        const floorNum = String(seed + 1).padStart(2, '0');
+                        imgSrc = `/map-box/map-box-${floorNum}.png`;
+                      }
                     }
                   }
 
@@ -536,9 +587,9 @@ export default function ServerRoomMap({
           <div 
             className="absolute z-5"
             style={{
-              left: `${mapW / 2 - 320}px`,
-              top: `${mapH / 2 - 150}px`,
-              width: "640px",
+              left: `${mapW / 2 - 580}px`,
+              top: `${mapH / 2 - 380}px`,
+              width: "1160px",
             }}
           >
             <CatWorkingGrid
