@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import CatWorkingGrid from "./CatWorkingGrid";
 import { mapService } from "../services/map.service";
+import { catsService } from "../services/cats.service";
 
 
 
@@ -88,6 +89,8 @@ export default function ServerRoomMap({
   wsSendRef,
   myAssignedSlotIndex,
   setMyAssignedSlotIndex,
+  setHeldCat,
+  onGiftReceived,
 }) {
   const [dimensions, setDimensions] = useState({ width: 1680, height: 1104 });
   const [zoom, setZoom] = useState(1.0);
@@ -255,6 +258,15 @@ export default function ServerRoomMap({
                 [data.id]: { ...prev[data.id], heldCat: data.heldCat }
               };
             });
+          } else if (data.type === "cat_gifted") {
+            if (String(data.toId) === String(user.id)) {
+              alert(`🎁 คุณได้รับของขวัญแมว "${data.cat.name}" จาก "${data.fromName}"!`);
+              if (onGiftReceived) {
+                onGiftReceived();
+              }
+            } else {
+              console.log(`🎁 ${data.fromName} มอบของขวัญแมวให้ ${data.toName}`);
+            }
           } else if (data.type === "player_left") {
             setOtherPlayers(prev => {
               const next = { ...prev };
@@ -324,6 +336,75 @@ export default function ServerRoomMap({
       })
     );
   }, [heldCat]);
+
+  // Handle 'F' key press to gift currently held cat to the nearest player
+  useEffect(() => {
+    const handleGiftKeyPress = async (e) => {
+      if (e.key.toLowerCase() === 'f') {
+        if (!heldCat) {
+          alert("❌ คุณต้องอุ้มแมวไว้บนหัวก่อน จึงจะสามารถมอบเป็นของขวัญให้เพื่อนได้!");
+          return;
+        }
+
+        // Find closest friend player in the room
+        let closestFriend = null;
+        let minDistance = Infinity;
+
+        const playerCenterX = playerPos.x + playerSize / 2;
+        const playerCenterY = playerPos.y + playerSize / 2;
+
+        Object.values(otherPlayers).forEach((friend) => {
+          const friendCenterX = friend.x + playerSize / 2;
+          const friendCenterY = friend.y + playerSize / 2;
+          const dist = Math.hypot(playerCenterX - friendCenterX, playerCenterY - friendCenterY);
+          
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestFriend = friend;
+          }
+        });
+
+        // 100px radius for gifting interaction
+        if (minDistance < 100 && closestFriend) {
+          const confirmGift = window.confirm(`🎁 คุณต้องการมอบแมว "${heldCat.name}" ให้กับเพื่อน "${closestFriend.username}" ใช่หรือไม่?`);
+          if (!confirmGift) return;
+
+          try {
+            const catId = heldCat.catId || heldCat.id;
+            
+            await catsService.giftCat(closestFriend.id, catId);
+            
+            // Notify WebSocket server about successful gift
+            if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+              socketRef.current.send(
+                JSON.stringify({
+                  type: "cat_gifted",
+                  giftedTo: closestFriend.id,
+                  giftedToName: closestFriend.username,
+                  cat: heldCat
+                })
+              );
+            }
+
+            // Clear local held cat
+            if (setHeldCat) {
+              setHeldCat(null);
+            }
+            
+            alert(`🎁 มอบแมว "${heldCat.name}" ให้กับ "${closestFriend.username}" เรียบร้อยแล้ว!`);
+          } catch (err) {
+            console.error(err);
+            alert("❌ ล้มเหลวในการมอบแมว: " + (err.response?.data?.error || err.message));
+          }
+        } else {
+          alert("❌ ไม่พบเพื่อนอยู่ใกล้ตัว (กรุณาเดินเข้าใกล้ตัวละครของเพื่อนแล้วกด F ใหม่)");
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleGiftKeyPress);
+    return () => window.removeEventListener("keydown", handleGiftKeyPress);
+  }, [heldCat, playerPos, otherPlayers, setHeldCat]);
 
   // Handle mouse scroll wheel zoom
   useEffect(() => {

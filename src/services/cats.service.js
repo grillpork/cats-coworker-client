@@ -50,4 +50,8 @@ export const catsService = {
   addCatToInventory: async (catId) => {
     return await api.post("/api/cats/inventory", { catId });
   },
+
+  giftCat: async (friendId, catId) => {
+    return await api.post("/api/cats/gift", { friendId, catId });
+  },
 };

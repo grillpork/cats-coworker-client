@@ -816,6 +816,15 @@ export function DecryptionGameContent() {
         onCatUpgradedRemote={handleCatUpgradedRemote}
         myAssignedSlotIndex={myAssignedSlotIndex}
         setMyAssignedSlotIndex={setMyAssignedSlotIndex}
+        setHeldCat={setHeldCat}
+        onGiftReceived={async () => {
+          try {
+            const invRes = await catsService.getUserInventory();
+            setInventory(invRes?.data || invRes || []);
+          } catch (e) {
+            console.error("Failed to reload user inventory after gift received:", e);
+          }
+        }}
       />
 
       {/* 2.5. Floating Top-Right User & Utility Panel (z-40) */}
