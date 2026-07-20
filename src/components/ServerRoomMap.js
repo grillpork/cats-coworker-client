@@ -291,6 +291,20 @@ export default function ServerRoomMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, room]);
 
+  // Auto-sync our zone cats to the WebSocket server whenever they change
+  useEffect(() => {
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
+    if (myAssignedSlotIndex === undefined || myAssignedSlotIndex === null) return;
+
+    const myZoneCats = deployedCats.slice(myAssignedSlotIndex * 8, (myAssignedSlotIndex * 8) + 8);
+    socketRef.current.send(
+      JSON.stringify({
+        type: "sync_cats",
+        cats: myZoneCats
+      })
+    );
+  }, [deployedCats, myAssignedSlotIndex]);
+
   // Handle mouse scroll wheel zoom
   useEffect(() => {
     const element = mapRef.current;
