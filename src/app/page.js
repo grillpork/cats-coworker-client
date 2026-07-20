@@ -14,6 +14,7 @@ import { useAuth } from "../components/auth/hook/useAuth";
 import { useRouter } from "next/navigation";
 import { catsService } from "../services/cats.service";
 import { authServices } from "../services/auth.service";
+import { mapService } from "../services/map.service";
 import { Sparkles, BookOpen, Cat, Package, Terminal, Users, LogOut, User, CheckCircle2, AlertCircle } from "lucide-react";
 import NumberFlow from '@number-flow/react';
 
@@ -61,6 +62,27 @@ export default function DecryptionGame() {
   const { isAuthenticated, user, logout } = useAuth();
   const router = useRouter();
   const userDropdownRef = useRef(null);
+  const [showLobby, setShowLobby] = useState(true);
+  const [showRoomModal, setShowRoomModal] = useState(false);
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [selectedRoomObj, setSelectedRoomObj] = useState(null);
+
+  // Load rooms from database on mount
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        const res = await mapService.getAllMaps();
+        const rooms = res?.data || res || [];
+        setAvailableRooms(rooms);
+        if (rooms.length > 0) {
+          setSelectedRoomObj(rooms[0]);
+        }
+      } catch (err) {
+        console.error("Failed to load rooms from database:", err);
+      }
+    };
+    fetchRooms();
+  }, []);
 
   // Click outside detection for user dropdown
   useEffect(() => {
@@ -674,6 +696,167 @@ export default function DecryptionGame() {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  if (showLobby) {
+    return (
+      <main className="relative w-screen h-screen bg-[#0a0b0d] text-slate-100 font-sans overflow-hidden flex flex-col items-center justify-center select-none">
+        {/* Animated grid background */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
+        
+        {/* Glow circles */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-rose-500/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
+
+        {/* Content Container */}
+        <div className="relative z-10 max-w-lg w-full px-6 flex flex-col items-center text-center gap-8">
+          {/* Logo / Badge */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border-2 border-rose-500/30 flex items-center justify-center shadow-[0_0_30px_rgba(244,63,94,0.2)] animate-pulse">
+              <span className="text-rose-500 font-black text-2xl">🐱</span>
+            </div>
+            <h1 className="text-4xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-rose-500 via-pink-500 to-violet-500 drop-shadow-md">
+              CATS CO-WORKER
+            </h1>
+            <p className="text-[10px] text-zinc-500 font-mono tracking-widest uppercase mt-1">
+              Real-time Server Room Simulator
+            </p>
+          </div>
+
+          {/* Description Card */}
+          <div className="w-full bg-[#101114]/90 border border-zinc-900 rounded-2xl p-5 shadow-2xl flex flex-col gap-4">
+            <div className="text-left flex flex-col gap-3 text-xs text-zinc-400">
+              <div className="flex items-center gap-3">
+                <span className="text-base">🪙</span>
+                <span><strong>FARM SP:</strong> Deploy cyber-cats onto server desks to earn SP.</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-base">💻</span>
+                <span><strong>SOLVE CODE:</strong> Solve decryption tasks in the terminal to obtain more cats.</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-base">🌐</span>
+                <span><strong>MULTIPLAYER:</strong> Connect in real-time and coordinate with other players.</span>
+              </div>
+            </div>
+
+            <div className="h-[1px] bg-zinc-800/60 my-1" />
+
+            {/* Profile info inside card */}
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-zinc-500">สถานะผู้ใช้:</span>
+              {isAuthenticated ? (
+                <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  {user?.username || user?.email?.split('@')[0]}
+                </span>
+              ) : (
+                <span className="text-zinc-400">Guest Mode (ไม่ได้เข้าสู่ระบบ)</span>
+              )}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-col w-full gap-3">
+            <button
+              onClick={() => setShowRoomModal(true)}
+              className="w-full py-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-black text-sm uppercase tracking-wider rounded-xl shadow-[0_4px_20px_rgba(244,63,94,0.3)] hover:shadow-[0_4px_25px_rgba(244,63,94,0.45)] hover:scale-[1.02] active:scale-95 transition-all cursor-pointer border border-rose-500/30"
+            >
+              🚀 เข้าสู่ห้องเซิร์ฟเวอร์ (Enter Server Room)
+            </button>
+
+            {!isAuthenticated && (
+              <Link
+                href="/auth/sign-in"
+                className="w-full py-3 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white font-bold text-xs uppercase tracking-wider rounded-xl border border-zinc-850 hover:border-zinc-700 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                🔑 เข้าสู่ระบบเพื่อบันทึกข้อมูล (Log In)
+              </Link>
+            )}
+
+            {isAuthenticated && user?.roleName?.toLowerCase() === "admin" && (
+              <Link
+                href="/backoffice/overview"
+                className="w-full py-3 bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-850 hover:border-rose-500/50 text-rose-400 hover:text-rose-300 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                ⚙️ แผงควบคุมแอดมิน (Backoffice)
+              </Link>
+            )}
+          </div>
+
+          <div className="text-[9px] text-zinc-600 font-mono tracking-wider">
+            DEVELOPED BY ANTIGRAVITY &bull; ADVANCED AGENTIC CODING v1.0
+          </div>
+        </div>
+
+        {/* Room Selection Modal */}
+        {showRoomModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
+            <div className="bg-[#101114] border border-zinc-800 rounded-2xl p-6 max-w-sm w-full mx-4 flex flex-col gap-5 shadow-[0_0_50px_rgba(0,0,0,0.8)] font-sans">
+              <div className="flex flex-col gap-1.5 text-center">
+                <h2 className="text-lg font-black text-slate-100 uppercase tracking-wider flex items-center justify-center gap-2">
+                  🚪 เลือก Server Room
+                </h2>
+                <p className="text-[10px] text-zinc-500">
+                  เลือกห้องเซิร์ฟเวอร์ที่คุณต้องการเข้าไปมีส่วนร่วมกับผู้อื่น (ดึงจากฐานข้อมูลจริง)
+                </p>
+              </div>
+
+              {/* Room Options */}
+              <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-1">
+                {availableRooms.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-zinc-500 font-mono">
+                    ไม่พบข้อมูลห้องในระบบฐานข้อมูล
+                  </div>
+                ) : (
+                  availableRooms.map((room) => (
+                    <button
+                      key={room.id}
+                      onClick={() => setSelectedRoomObj(room)}
+                      className={`w-full py-3 px-4 rounded-xl text-xs font-bold text-left border transition-all flex justify-between items-center ${
+                        selectedRoomObj?.id === room.id
+                          ? "bg-rose-500/10 text-rose-400 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.15)]"
+                          : "bg-[#151619] text-zinc-400 border-zinc-850 hover:border-zinc-700 hover:text-white"
+                      }`}
+                    >
+                      <span>{room.name}</span>
+                      {selectedRoomObj?.id === room.id && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowRoomModal(false)}
+                  className="flex-1 py-3 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white border border-zinc-850 hover:border-zinc-700 rounded-xl text-xs font-bold transition-all active:scale-95"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={() => {
+                    if (!selectedRoomObj) return alert("กรุณาเลือกห้องที่ต้องการเข้าร่วม");
+                    setShowRoomModal(false);
+                    setShowLobby(false);
+                  }}
+                  disabled={availableRooms.length === 0}
+                  className={`flex-1 py-3 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg active:scale-95 transition-all ${
+                    availableRooms.length === 0
+                      ? "bg-zinc-850 text-zinc-600 cursor-not-allowed border border-zinc-900"
+                      : "bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 cursor-pointer"
+                  }`}
+                >
+                  เข้าร่วมห้อง
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    );
+  }
+
   return (
     <main className="relative w-screen h-screen bg-[#101114] text-slate-100 font-sans overflow-hidden select-none">
       
@@ -692,6 +875,9 @@ export default function DecryptionGame() {
         cipherText={formattedCipherText}
         subText={subText}
         heldCat={heldCat}
+        user={user}
+        room={selectedRoomObj?.name}
+        selectedMap={selectedRoomObj}
       />
 
       {/* 2.5. Floating Top-Right User & Utility Panel (z-40) */}

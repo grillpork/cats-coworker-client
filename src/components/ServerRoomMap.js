@@ -78,6 +78,9 @@ export default function ServerRoomMap({
   heldCat,
   onPlaceCat,
   onPickupCat,
+  user,
+  room,
+  selectedMap,
 }) {
   const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
   const [zoom, setZoom] = useState(1.0);
@@ -85,6 +88,10 @@ export default function ServerRoomMap({
   const coinSize = 24;
 
   const mapRef = useRef(null);
+  const socketRef = useRef(null);
+
+  // Other players online in the same room
+  const [otherPlayers, setOtherPlayers] = useState({});
 
   // Custom Map State loaded from local storage
   const [customMap, setCustomMap] = useState(null);
@@ -96,7 +103,7 @@ export default function ServerRoomMap({
 
   const [tileAssets, setTileAssets] = useState([]);
 
-  // Load custom map on mount
+  // Load custom map layout based on selected room
   useEffect(() => {
     const loadMapData = async () => {
       try {
@@ -104,14 +111,15 @@ export default function ServerRoomMap({
         const sprites = spritesRes?.data || spritesRes || [];
         setTileAssets(sprites);
 
-        const mapRes = await mapService.getActiveMap();
-        const map = mapRes?.data || mapRes;
-        if (map && map.rows && map.cols && Array.isArray(map.tiles)) {
-          setCustomMap(map);
+        // Use passed selectedMap from room selection, otherwise fall back to default active map
+        const map = selectedMap || (await mapService.getActiveMap());
+        const resolvedMap = map?.data || map;
+        if (resolvedMap && resolvedMap.rows && resolvedMap.cols && Array.isArray(resolvedMap.tiles)) {
+          setCustomMap(resolvedMap);
           // Center character in custom map
           setPlayerPos({
-            x: (map.cols * 48) / 2,
-            y: (map.rows * 48) / 2,
+            x: (resolvedMap.cols * 48) / 2,
+            y: (resolvedMap.rows * 48) / 2,
           });
         }
       } catch (e) {
@@ -119,7 +127,7 @@ export default function ServerRoomMap({
       }
     };
     loadMapData();
-  }, []);
+  }, [selectedMap]);
 
   // Initialize and handle window resizing
   useEffect(() => {
@@ -136,6 +144,77 @@ export default function ServerRoomMap({
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // WebSocket connection for real-time multiplayer
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const isProd = window.location.hostname === "catako.site" || window.location.hostname === "catako.site";
+    const wsUrl = isProd ? "wss://backend-catako.site" : "ws://localhost:4000";
+
+    const ws = new WebSocket(wsUrl);
+    socketRef.current = ws;
+
+    const identity = {
+      id: user?.id || `guest-${Math.random().toString(36).substr(2, 9)}`,
+      username: user?.username || user?.email?.split('@')[0] || `Guest-${Math.floor(1000 + Math.random() * 9000)}`
+    };
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({
+        type: "join",
+        user: identity,
+        room: room || "Server Room A",
+        x: playerPos.x,
+        y: playerPos.y
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "players_list") {
+          const initial = {};
+          data.players.forEach(p => {
+            initial[p.id] = p;
+          });
+          setOtherPlayers(initial);
+        } else if (data.type === "player_joined") {
+          setOtherPlayers(prev => ({
+            ...prev,
+            [data.player.id]: data.player
+          }));
+        } else if (data.type === "player_moved") {
+          setOtherPlayers(prev => {
+            if (!prev[data.id]) return prev;
+            return {
+              ...prev,
+              [data.id]: { ...prev[data.id], x: data.x, y: data.y }
+            };
+          });
+        } else if (data.type === "player_left") {
+          setOtherPlayers(prev => {
+            const next = { ...prev };
+            delete next[data.id];
+            return next;
+          });
+        } else if (data.type === "announcement") {
+          alert(`📢 ประกาศจากระบบ:\n\n${data.message}`);
+        } else if (data.type === "kicked") {
+          alert("❌ คุณถูกเตะออกจาก Server Room โดยผู้ดูแลระบบ");
+          window.location.reload();
+        }
+      } catch (err) {
+        console.error("WS Client Error:", err);
+      }
+    };
+
+    return () => {
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close();
+      }
+    };
+  }, [user]);
 
   // Handle mouse scroll wheel zoom
   useEffect(() => {
@@ -190,6 +269,17 @@ export default function ServerRoomMap({
 
         const nextX = Math.max(minX, Math.min(maxX, prev.x + dx));
         const nextY = Math.max(minY, Math.min(maxY, prev.y + dy));
+
+        // Send movement update to server if coordinates changed
+        if (prev.x !== nextX || prev.y !== nextY) {
+          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            socketRef.current.send(JSON.stringify({
+              type: "move",
+              x: nextX,
+              y: nextY
+            }));
+          }
+        }
 
         return { x: nextX, y: nextY };
       });
@@ -491,6 +581,27 @@ export default function ServerRoomMap({
               </div>
             );
           })()}
+
+          {/* Other Players */}
+          {Object.values(otherPlayers).map((p) => (
+            <div
+              key={p.id}
+              className="absolute transition-all duration-75 ease-out select-none z-10 flex flex-col items-center"
+              style={{
+                left: p.x,
+                top: p.y,
+                width: playerSize,
+                height: playerSize,
+              }}
+            >
+              <div className="absolute -top-6 flex flex-col items-center">
+                <span className="text-[8px] bg-black/85 text-blue-300 px-2 py-0.5 rounded-full mb-0.5 whitespace-nowrap border border-blue-900/55 font-mono font-bold drop-shadow-md">
+                  {p.username}
+                </span>
+              </div>
+              <img src="/mc-00.png" alt={p.username} className="w-14 h-14 object-contain drop-shadow-[0_0_8px_rgba(59,130,246,0.45)] opacity-80" />
+            </div>
+          ))}
         </div>
       </div>
 

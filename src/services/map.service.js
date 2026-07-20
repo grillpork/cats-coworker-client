@@ -5,6 +5,10 @@ export const mapService = {
     return await api.get("/api/maps");
   },
   
+  getAllMaps: async () => {
+    return await api.get("/api/maps/all");
+  },
+  
   saveMap: async (mapData) => {
     return await api.post("/api/maps", mapData);
   },

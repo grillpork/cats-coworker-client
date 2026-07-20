@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Cat, Map, LogOut, ArrowLeft, Image as ImageIcon } from "lucide-react";
+import { LayoutDashboard, Users, Cat, Map, LogOut, ArrowLeft, Image as ImageIcon, Server } from "lucide-react";
 
 export default function Sidebar({ user, logout }) {
   const pathname = usePathname();
@@ -14,6 +14,7 @@ export default function Sidebar({ user, logout }) {
     { name: "จัดการข้อมูลแมว", path: "/backoffice/cats", icon: Cat },
     { name: "จัดการภาพแผนที่", path: "/backoffice/sprites", icon: ImageIcon },
     { name: "เครื่องมือจัดแผนที่", path: "/backoffice/map-editor", icon: Map },
+    { name: "จัดการ Server Room", path: "/backoffice/server-room", icon: Server },
   ];
 
   return (
