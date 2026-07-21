@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import CatWorkingGrid from "./CatWorkingGrid";
 import { mapService } from "../services/map.service";
 import { catsService } from "../services/cats.service";
@@ -97,12 +97,38 @@ export default function ServerRoomMap({
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [targetPos, setTargetPos] = useState(null);
+  const [activeBubbles, setActiveBubbles] = useState({});
   const chatEndRef = useRef(null);
   const playerSize = 48;
   const coinSize = 24;
 
+  // Cleanup expired chat bubbles (older than 3 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setActiveBubbles(prev => {
+        let changed = false;
+        const next = { ...prev };
+        for (const [userId, bubble] of Object.entries(next)) {
+          if (now - bubble.timestamp > 3000) {
+            delete next[userId];
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
   const mapRef = useRef(null);
   const socketRef = useRef(null);
+  const slotPositionsRef = useRef(null);
+
+  // Callback to receive real DOM-measured slot positions from CatWorkingGrid
+  const handleSlotPositionsReady = useCallback((positions) => {
+    slotPositionsRef.current = positions;
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -279,6 +305,13 @@ export default function ServerRoomMap({
             }
           } else if (data.type === "chat_broadcast") {
             setChatMessages(prev => [...prev, data]);
+            setActiveBubbles(prev => ({
+              ...prev,
+              [data.senderId]: {
+                message: data.message,
+                timestamp: Date.now()
+              }
+            }));
           } else if (data.type === "player_left") {
             setOtherPlayers(prev => {
               const next = { ...prev };
@@ -583,7 +616,20 @@ export default function ServerRoomMap({
   const offsetY = customMap ? Math.max(0, (dimensions.height - mapH) / 2) : 0;
 
   // Helper to compute center coordinates of each of the 48 desk slots across 6 zones
+  // Uses real DOM-measured positions from CatWorkingGrid when available,
+  // with tile-grid fallback for initial render before measurements arrive.
   const getDeskCenter = (slotIdx) => {
+    // Use measured DOM positions (offset relative to CatWorkingGrid container)
+    if (slotPositionsRef.current && slotPositionsRef.current[slotIdx]) {
+      const gridLeft = mapW / 2 - 580;
+      const gridTop = mapH / 2 - 380;
+      return {
+        x: gridLeft + slotPositionsRef.current[slotIdx].x,
+        y: gridTop + slotPositionsRef.current[slotIdx].y,
+      };
+    }
+
+    // Fallback: tile-based estimate (may be inaccurate)
     const zoneIdx = Math.floor(slotIdx / 8);
     const subIdx = slotIdx % 8;
     const subRow = Math.floor(subIdx / 4);
@@ -841,6 +887,7 @@ export default function ServerRoomMap({
               onDeployToSlot={onDeployToSlot}
               cipherText={cipherText}
               subText={subText}
+              onSlotPositionsReady={handleSlotPositionsReady}
             />
           </div>
 
@@ -869,6 +916,18 @@ export default function ServerRoomMap({
                   height: playerSize + (heldCat ? 30 : 0),
                 }}
               >
+                {/* Chat Bubble above player */}
+                {activeBubbles[user?.id] && (
+                  <div 
+                    className="absolute bg-black/85 text-white text-[10px] font-black px-2.5 py-1.5 rounded-xl border border-zinc-700/80 shadow-lg drop-shadow-md whitespace-nowrap animate-pulse z-20 pointer-events-none transition-all duration-300"
+                    style={{
+                      top: heldCat ? "-115px" : "-65px"
+                    }}
+                  >
+                    {activeBubbles[user.id].message}
+                  </div>
+                )}
+
                 {heldCat ? (
                   <div className="absolute -top-16 flex flex-col items-center animate-bounce">
                     <span className="text-[8px] bg-black/80 text-white px-2 py-0.5 rounded-full mb-0.5 whitespace-nowrap border border-zinc-700  drop-shadow-md">
@@ -911,6 +970,18 @@ export default function ServerRoomMap({
                 height: playerSize + (p.heldCat ? 30 : 0),
               }}
             >
+              {/* Chat Bubble above other player */}
+              {activeBubbles[p.id] && (
+                <div 
+                  className="absolute bg-black/85 text-white text-[10px] font-black px-2.5 py-1.5 rounded-xl border border-zinc-700/80 shadow-lg drop-shadow-md whitespace-nowrap animate-pulse z-20 pointer-events-none transition-all duration-300"
+                  style={{
+                    top: p.heldCat ? "-115px" : "-65px"
+                  }}
+                >
+                  {activeBubbles[p.id].message}
+                </div>
+              )}
+
               {p.heldCat && (
                 <div className="absolute -top-16 flex flex-col items-center animate-bounce">
                   <img
@@ -937,7 +1008,7 @@ export default function ServerRoomMap({
       </div>
 
       {/* Zoom UI Controller Overlay (z-20) */}
-      <div className="absolute top-4 left-4 z-20 bg-[#17181a]/90 backdrop-blur-md border border-zinc-800 rounded-lg p-1.5 flex items-center gap-1.5 shadow-xl  text-[9px]">
+      <div className="fixed top-4 left-4 z-20 bg-[#17181a]/90 backdrop-blur-md border border-zinc-800 rounded-lg p-1.5 flex items-center gap-1.5 shadow-xl  text-[9px]">
         <button
           onClick={() => setZoom((prev) => Math.max(0.5, prev - 0.1))}
           className="w-5 h-5 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all text-white rounded font-bold text-xs"
@@ -962,7 +1033,7 @@ export default function ServerRoomMap({
       </div>
 
       {/* Online Players List Overlay (Top-Left, z-20) */}
-      <div className="absolute top-16 left-4 z-20 bg-[#17181a]/95 backdrop-blur-md border border-zinc-800 rounded-2xl p-4 w-60 shadow-2xl flex flex-col gap-2.5 font-sans select-none">
+      <div className="fixed top-16 left-4 z-20 bg-[#17181a]/95 backdrop-blur-md border border-zinc-800 rounded-2xl p-4 w-60 shadow-2xl flex flex-col gap-2.5 font-sans select-none">
         <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2 mb-0.5">
           <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1.5 ">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -1002,7 +1073,7 @@ export default function ServerRoomMap({
       </div>
 
       {/* Room Chat Log Overlay */}
-      <div className="absolute bottom-4 left-4 z-20 w-80 bg-[#17181a]/95 backdrop-blur-md border border-zinc-800 rounded-2xl p-4 shadow-2xl flex flex-col gap-3 font-sans select-none pointer-events-auto">
+      <div className="fixed bottom-28 left-4 z-30 w-80 bg-[#17181a]/95 backdrop-blur-md border border-zinc-800 rounded-2xl p-4 shadow-2xl flex flex-col gap-3 font-sans select-none pointer-events-auto">
         <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-800/80 pb-2">
           💬 Room Chat ({room || "Server Room A"})
         </div>

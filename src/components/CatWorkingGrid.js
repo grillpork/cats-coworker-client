@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 
 const rarityToImage = {
   COMMON: '/cats/cat-common.png',
@@ -84,9 +84,41 @@ export default function CatWorkingGrid({
   onDeployToSlot,
   cipherText = "L-L-H-O-E",
   subText = "X - Y",
+  onSlotPositionsReady,
 }) {
+  const gridRef = useRef(null);
+
+  // Measure actual DOM positions of all 48 slot divs and report to parent
+  useEffect(() => {
+    if (!gridRef.current || !onSlotPositionsReady) return;
+
+    const measurePositions = () => {
+      const container = gridRef.current;
+      if (!container) return;
+      const containerRect = container.getBoundingClientRect();
+      const positions = [];
+      for (let i = 0; i < 48; i++) {
+        const el = container.querySelector(`[data-slot-idx="${i}"]`);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          positions[i] = {
+            x: rect.left - containerRect.left + rect.width / 2,
+            y: rect.top - containerRect.top + rect.height / 2,
+          };
+        }
+      }
+      if (positions.length > 0) {
+        onSlotPositionsReady(positions);
+      }
+    };
+
+    // Measure after layout settles
+    const timer = setTimeout(measurePositions, 200);
+    return () => clearTimeout(timer);
+  }, [onSlotPositionsReady, slots]);
+
   return (
-    <div className="flex flex-col items-center gap-4 select-none w-full">
+    <div ref={gridRef} className="flex flex-col items-center gap-4 select-none w-full">
       {/* 6 Pre-allocated Player Zones Grid (3 columns x 2 rows) */}
       <div className="grid grid-cols-3 gap-8 max-w-6xl w-full mt-2">
         {Array.from({ length: 6 }).map((_, zoneIdx) => {
@@ -145,6 +177,7 @@ export default function CatWorkingGrid({
                   return (
                     <div
                       key={globalSlotIdx}
+                      data-slot-idx={globalSlotIdx}
                       onClick={handleProtectedClick}
                       draggable={cat && isSelf ? "true" : "false"}
                       onDragStart={(e) => {
