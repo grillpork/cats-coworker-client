@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Ghost, Pencil, Trash2, Play } from 'lucide-react';
 
 export default function RoomSelectionModal({
   showRoomModal,
   setShowRoomModal,
+  mode, // "play" | "create"
   availableRooms,
   searchQuery,
   setSearchQuery,
@@ -19,6 +20,17 @@ export default function RoomSelectionModal({
   const [roomToEdit, setRoomToEdit] = useState(null);
   const [inputValue, setInputValue] = useState('');
 
+  // Automatically open create input if mode is 'create'
+  useEffect(() => {
+    if (showRoomModal && mode === 'create') {
+      setInputDialogType('create');
+      setInputValue('');
+      setShowInputDialog(true);
+    } else {
+      setShowInputDialog(false);
+    }
+  }, [showRoomModal, mode]);
+
   if (!showRoomModal) return null;
 
   const handleOpenCreate = () => {
@@ -32,6 +44,14 @@ export default function RoomSelectionModal({
     setRoomToEdit(room);
     setInputValue(room.name);
     setShowInputDialog(true);
+  };
+
+  const handleCloseInputDialog = () => {
+    setShowInputDialog(false);
+    // If the modal was opened specifically to Create, closing the dialog should close the main modal
+    if (mode === 'create') {
+      setShowRoomModal(false);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -50,7 +70,10 @@ export default function RoomSelectionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="bg-[#222222] rounded-[24px] p-6 max-w-sm w-full mx-4 flex flex-col gap-6 shadow-2xl font-sans relative">
+      {/* Hide main room list background only if we are strictly in create mode and showing the input dialog */}
+      <div className={`bg-[#222222] rounded-[24px] p-6 max-w-sm w-full mx-4 flex flex-col gap-6 shadow-2xl font-sans relative transition-all ${
+        (mode === 'create' && showInputDialog) ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
+      }`}>
         
         <button 
           onClick={() => setShowRoomModal(false)}
@@ -74,12 +97,14 @@ export default function RoomSelectionModal({
               className="flex-1 bg-transparent text-sm text-zinc-800 placeholder:text-zinc-500 outline-none"
             />
           </div>
-          <button 
-            onClick={handleOpenCreate}
-            className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center hover:bg-zinc-200 active:scale-95 transition-all shadow-sm"
-          >
-            <Plus size={24} className="text-black" />
-          </button>
+          {mode !== 'play' && (
+            <button 
+              onClick={handleOpenCreate}
+              className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center hover:bg-zinc-200 active:scale-95 transition-all shadow-sm"
+            >
+              <Plus size={24} className="text-black" />
+            </button>
+          )}
         </div>
 
         <div className="flex flex-col gap-3 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
@@ -148,7 +173,7 @@ export default function RoomSelectionModal({
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-xs">
           <form 
             onSubmit={handleSubmit}
-            className="bg-[#2a2a2a] border border-zinc-700/50 rounded-[24px] p-6 max-w-xs w-full mx-4 flex flex-col gap-4 shadow-2xl font-sans"
+            className="bg-[#2a2a2a] border border-zinc-700/50 rounded-[24px] p-6 max-w-xs w-full mx-4 flex flex-col gap-4 shadow-2xl font-sans animate-in fade-in zoom-in-95 duration-150"
           >
             <h3 className="text-white font-medium text-base text-center">
               {inputDialogType === 'create' ? 'สร้างเซิร์ฟเวอร์รูมใหม่' : 'แก้ไขชื่อเซิร์ฟเวอร์รูม'}
@@ -170,7 +195,7 @@ export default function RoomSelectionModal({
             <div className="flex gap-2.5 mt-2">
               <button
                 type="button"
-                onClick={() => setShowInputDialog(false)}
+                onClick={handleCloseInputDialog}
                 className="flex-1 py-2.5 bg-zinc-700 hover:bg-zinc-650 text-white text-xs font-bold rounded-xl transition-all active:scale-95 cursor-pointer"
               >
                 ยกเลิก

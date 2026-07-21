@@ -16,6 +16,7 @@ export default function LobbyPage() {
   const router = useRouter();
 
   const [showRoomModal, setShowRoomModal] = useState(false);
+  const [roomModalMode, setRoomModalMode] = useState("play"); // "play" | "create"
   const [availableRooms, setAvailableRooms] = useState([]);
   const [mapTemplates, setMapTemplates] = useState([]);
   const [selectedRoomObj, setSelectedRoomObj] = useState(null);
@@ -201,11 +202,52 @@ export default function LobbyPage() {
           <RightMenu isAuthenticated={isAuthenticated} />
 
         </div>
+
+        {/* Bottom Bar Actions */}
+        <div className="flex items-center justify-between w-full z-20 mt-4 border-t-4 border-white/20 pt-4">
+          <div className="bg-[#0d47a1]/70 border-2 border-[#fff]/40 rounded-xl px-4 py-2 text-white font-mono text-[10px] max-w-sm">
+            <Lightbulb size={14} className="inline mr-1 text-yellow-300" /> TIP: พาแมวหายาก (Epic/Legendary) ไปขุดเหรียญจะได้รับแต้ม SP ต่อวินาทีสูงขึ้นมาก!
+          </div>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => {
+                if (!isAuthenticated) {
+                  router.push('/auth/sign-in');
+                  return;
+                }
+                setRoomModalMode("create");
+                fetchRooms();
+                setShowRoomModal(true);
+              }}
+              className="px-6 py-3.5 bg-gradient-to-b from-[#ab47bc] to-[#7b1fa2] border-[3px] border-white rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all text-white font-black text-sm uppercase tracking-wider flex items-center gap-2 cursor-pointer"
+            >
+              <Map size={18} />
+              <span>Create</span>
+            </button>
+            <button 
+              onClick={() => {
+                if (!isAuthenticated) {
+                  router.push('/auth/sign-in');
+                  return;
+                }
+                setRoomModalMode("play");
+                fetchRooms();
+                setShowRoomModal(true);
+              }}
+              className="px-10 py-4 bg-gradient-to-b from-yellow-300 via-amber-400 to-orange-500 border-[4px] border-white rounded-2xl shadow-[0_5px_15px_rgba(255,160,0,0.4)] hover:scale-105 active:scale-95 transition-all text-[#5d4037] font-black text-base uppercase tracking-widest flex items-center gap-2 cursor-pointer"
+            >
+              <Gamepad2 size={20} />
+              <span>Play</span>
+            </button>
+          </div>
+        </div>
+
       </div>
 
       <RoomSelectionModal
         showRoomModal={showRoomModal}
         setShowRoomModal={setShowRoomModal}
+        mode={roomModalMode}
         availableRooms={availableRooms}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
