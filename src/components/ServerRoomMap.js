@@ -192,6 +192,7 @@ export default function ServerRoomMap({
             user: {
               id: user.id,
               username: user.username || user.email?.split("@")[0] || `User-${user.id}`,
+              avatar: user.avatar || null,
             },
             room: currentRoomName,
             x: playerPos.x,
