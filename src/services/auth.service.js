@@ -60,5 +60,9 @@ export const authServices = {
     getStorageInfo: async () => {
         const res = await api.get('/api/user/storage-info');
         return res;
+    },
+    updateProfile: async (name, avatar) => {
+        const res = await api.put('/api/user', { name, avatar });
+        return res;
     }
 }

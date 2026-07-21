@@ -841,7 +841,12 @@ export default function ServerRoomMap({
                     </div>
                   )
                 )}
-                <img src="/mc-00.png" alt="Main Character" className="w-14 h-14 object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.5)] mt-auto" />
+                <img 
+                  src={user?.avatar?.startsWith("http") ? user.avatar : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${user?.avatar || '/mc-00.png'}`} 
+                  alt="Main Character" 
+                  className="w-14 h-14 object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.5)] mt-auto" 
+                  onError={(e) => { e.target.src = "/mc-00.png"; }}
+                />
               </div>
             );
           })()}
@@ -872,7 +877,12 @@ export default function ServerRoomMap({
                   {p.username}
                 </span>
               </div>
-              <img src="/mc-00.png" alt={p.username} className="w-14 h-14 object-contain drop-shadow-[0_0_8px_rgba(59,130,246,0.45)] mt-auto opacity-80" />
+              <img 
+                src={p.avatar?.startsWith("http") ? p.avatar : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${p.avatar || '/mc-00.png'}`} 
+                alt={p.username} 
+                className="w-14 h-14 object-contain drop-shadow-[0_0_8px_rgba(59,130,246,0.45)] mt-auto opacity-80" 
+                onError={(e) => { e.target.src = "/mc-00.png"; }}
+              />
             </div>
           ))}
         </div>
