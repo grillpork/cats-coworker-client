@@ -94,11 +94,19 @@ export default function ServerRoomMap({
 }) {
   const [dimensions, setDimensions] = useState({ width: 1680, height: 1104 });
   const [zoom, setZoom] = useState(1.0);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [targetPos, setTargetPos] = useState(null);
+  const chatEndRef = useRef(null);
   const playerSize = 48;
   const coinSize = 24;
 
   const mapRef = useRef(null);
   const socketRef = useRef(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   // Attach wsSendRef so parent component can emit WS messages
   useEffect(() => {
@@ -269,6 +277,8 @@ export default function ServerRoomMap({
             } else {
               console.log(`🎁 ${data.fromName} มอบของขวัญแมวให้ ${data.toName}`);
             }
+          } else if (data.type === "chat_broadcast") {
+            setChatMessages(prev => [...prev, data]);
           } else if (data.type === "player_left") {
             setOtherPlayers(prev => {
               const next = { ...prev };
@@ -353,6 +363,9 @@ export default function ServerRoomMap({
   // Handle 'F' key press to gift currently held cat to the nearest player
   useEffect(() => {
     const handleGiftKeyPress = async (e) => {
+      if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
+        return;
+      }
       if (e.key.toLowerCase() === 'f') {
         if (!heldCat) {
           alert("❌ คุณต้องอุ้มแมวไว้บนหัวก่อน จึงจะสามารถมอบเป็นของขวัญให้เพื่อนได้!");
@@ -439,8 +452,12 @@ export default function ServerRoomMap({
   // Keyboard Event Listeners for movement
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
+        return;
+      }
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d"].includes(e.key)) {
         e.preventDefault(); // prevent scroll
+        setTargetPos(null); // Cancel click-to-walk on keyboard override
       }
       keysPressed.current[e.key] = true;
     };
@@ -464,6 +481,23 @@ export default function ServerRoomMap({
         if (keysPressed.current["ArrowDown"] || keysPressed.current["s"]) dy += step;
         if (keysPressed.current["ArrowLeft"] || keysPressed.current["a"]) dx -= step;
         if (keysPressed.current["ArrowRight"] || keysPressed.current["d"]) dx += step;
+
+        // Auto-navigate if click target is set and no keys are pressed
+        if (dx === 0 && dy === 0 && targetPos) {
+          const distX = targetPos.x - prev.x;
+          const distY = targetPos.y - prev.y;
+          const distance = Math.hypot(distX, distY);
+
+          if (distance > step) {
+            dx = (distX / distance) * step;
+            dy = (distY / distance) * step;
+          } else {
+            // Close enough, snap and clear target
+            dx = distX;
+            dy = distY;
+            setTargetPos(null);
+          }
+        }
 
         const minX = wallSize;
         const maxX = (customMap ? customMap.cols * 48 : dimensions.width) - wallSize - playerSize;
@@ -493,11 +527,14 @@ export default function ServerRoomMap({
       window.removeEventListener("keyup", handleKeyUp);
       clearInterval(interval);
     };
-  }, [dimensions, customMap]);
+  }, [dimensions, customMap, targetPos]);
 
   // Handle 'E' key press to place or pickup/swap held cat
   useEffect(() => {
     const handlePlaceKeyPress = (e) => {
+      if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
+        return;
+      }
       if (e.key.toLowerCase() === 'e') {
         // Find closest slot
         let closestSlotIdx = -1;
@@ -639,6 +676,16 @@ export default function ServerRoomMap({
         {/* Centered Map Container Wrapper */}
         <div
           className="absolute"
+          onClick={(e) => {
+            // Ignore click if clicking interactive components like forms, inputs, buttons
+            if (e.target.closest("input") || e.target.closest("button") || e.target.closest(".pointer-events-auto")) {
+              return;
+            }
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            setTargetPos({ x: clickX - playerSize / 2, y: clickY - playerSize / 2 });
+          }}
           style={{
             left: `${offsetX}px`,
             top: `${offsetY}px`,
@@ -952,6 +999,57 @@ export default function ServerRoomMap({
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Room Chat Log Overlay */}
+      <div className="absolute bottom-4 left-4 z-20 w-80 bg-[#17181a]/95 backdrop-blur-md border border-zinc-800 rounded-2xl p-4 shadow-2xl flex flex-col gap-3 font-sans select-none pointer-events-auto">
+        <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-800/80 pb-2">
+          💬 Room Chat ({room || "Server Room A"})
+        </div>
+        
+        {/* Chat messages log */}
+        <div className="h-32 overflow-y-auto pr-1 flex flex-col gap-2 custom-scrollbar">
+          {chatMessages.length === 0 ? (
+            <span className="text-[10px] text-zinc-600 font-bold block text-center py-8">ไม่มีข้อความ... พิมพ์ทักทายเพื่อนได้เลย!</span>
+          ) : (
+            chatMessages.map((msg, index) => {
+              const isMe = String(msg.senderId) === String(user?.id);
+              return (
+                <div key={index} className="text-xs leading-relaxed break-words">
+                  <span className={`font-black mr-1 ${isMe ? 'text-rose-400' : 'text-blue-400'}`}>
+                    {msg.senderName}:
+                  </span>
+                  <span className="text-zinc-200">{msg.message}</span>
+                </div>
+              );
+            })
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Chat Input form */}
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!chatInput.trim()) return;
+            if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+              socketRef.current.send(JSON.stringify({
+                type: "chat_message",
+                message: chatInput.trim()
+              }));
+              setChatInput("");
+            }
+          }}
+          className="flex gap-2"
+        >
+          <input
+            type="text"
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder="พิมพ์ข้อความ... (กด Enter เพื่อส่ง)"
+            className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-rose-500 transition-colors"
+          />
+        </form>
       </div>
     </div>
   );
