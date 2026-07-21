@@ -16,7 +16,7 @@ import { Suspense } from "react";
 import { catsService } from "../../services/cats.service";
 import { authServices } from "../../services/auth.service";
 import { mapService } from "../../services/map.service";
-import { Sparkles, BookOpen, Cat, Package, Terminal, Users, LogOut, User, CheckCircle2, AlertCircle } from "lucide-react";
+import { Sparkles, BookOpen, Cat, Package, Terminal, Users, LogOut, User, CheckCircle2, AlertCircle, Home } from "lucide-react";
 import NumberFlow from '@number-flow/react';
 
 // Sound effect helper
@@ -832,6 +832,14 @@ export function DecryptionGameContent() {
         
         {/* Horizontal Row: Skip Tutorial, Coin display, Avatar */}
         <div className="flex items-center gap-2.5">
+          {/* Home Button */}
+          <Link
+            href="/"
+            className="px-3.5 py-1.5 bg-[#17181a]/95 text-slate-200 hover:text-white border border-zinc-800 hover:border-zinc-500 rounded-full font-bold text-[9px] uppercase tracking-wider shadow-lg active:scale-95 transition-all flex items-center gap-1.5"
+          >
+            <Home className="w-3.5 h-3.5 text-rose-500" /> Home
+          </Link>
+
           {/* Map Editor Button */}
           <Link
             href="/map-editor"

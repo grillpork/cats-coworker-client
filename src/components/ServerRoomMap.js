@@ -203,7 +203,8 @@ export default function ServerRoomMap({
             },
             room: currentRoomName,
             x: playerPos.x,
-            y: playerPos.y
+            y: playerPos.y,
+            sp: spPoints
           })
         );
       };
@@ -242,6 +243,14 @@ export default function ServerRoomMap({
               ...prev,
               [data.player.id]: data.player
             }));
+          } else if (data.type === "player_sp_updated") {
+            setOtherPlayers(prev => {
+              if (!prev[data.id]) return prev;
+              return {
+                ...prev,
+                [data.id]: { ...prev[data.id], sp: data.sp }
+              };
+            });
           } else if (data.type === "player_moved") {
             setOtherPlayers(prev => {
               if (!prev[data.id]) return prev;
@@ -336,6 +345,17 @@ export default function ServerRoomMap({
       })
     );
   }, [heldCat]);
+
+  // Sync spPoints to WS server whenever it changes
+  useEffect(() => {
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
+    socketRef.current.send(
+      JSON.stringify({
+        type: "sync_sp",
+        sp: spPoints
+      })
+    );
+  }, [spPoints]);
 
   // Handle 'F' key press to gift currently held cat to the nearest player
   useEffect(() => {
@@ -890,6 +910,46 @@ export default function ServerRoomMap({
         >
           Reset
         </button>
+      </div>
+
+      {/* Online Players List Overlay (Top-Left, z-20) */}
+      <div className="absolute top-16 left-4 z-20 bg-[#17181a]/95 backdrop-blur-md border border-zinc-800 rounded-2xl p-4 w-60 shadow-2xl flex flex-col gap-2.5 font-sans select-none">
+        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2 mb-0.5">
+          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Online Players ({Object.keys(otherPlayers).length + 1})
+          </span>
+        </div>
+        
+        <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-0.5 custom-scrollbar">
+          {/* Current Player (Me) */}
+          <div className="flex items-center justify-between bg-rose-500/5 border border-rose-500/10 rounded-xl p-2.5">
+            <div className="flex items-center gap-2 truncate">
+              <div className="w-5 h-5 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-[9px] font-black text-rose-400 font-mono">
+                ME
+              </div>
+              <span className="text-xs font-bold text-slate-200 truncate">{user?.name || user?.username || "You"}</span>
+            </div>
+            <span className="text-[10px] font-black text-yellow-400 font-mono">
+              🪙 {spPoints.toLocaleString()}
+            </span>
+          </div>
+
+          {/* Other Players */}
+          {Object.values(otherPlayers).map((player) => (
+            <div key={player.id} className="flex items-center justify-between bg-zinc-900/40 border border-zinc-800/40 rounded-xl p-2.5">
+              <div className="flex items-center gap-2 truncate">
+                <div className="w-5 h-5 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-[9px] font-black text-blue-400 font-mono">
+                  PL
+                </div>
+                <span className="text-xs text-zinc-300 truncate">{player.username}</span>
+              </div>
+              <span className="text-[10px] font-black text-yellow-400 font-mono">
+                🪙 {(player.sp || 0).toLocaleString()}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
