@@ -139,7 +139,7 @@ export default function MapEditorPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#111215] text-slate-100 flex items-center justify-center font-mono">
+      <div className="min-h-screen bg-[#111215] text-slate-100 flex items-center justify-center ">
         <div className="text-center flex flex-col gap-2">
           <span className="text-2xl animate-pulse">🔒 กำลังป้องกันพื้นที่ทำงาน...</span>
           <span className="text-[10px] text-zinc-500 uppercase">กำลังตรวจสอบสิทธิ์การใช้งาน</span>
@@ -150,7 +150,7 @@ export default function MapEditorPage() {
 
   if (!isAuthenticated || user?.roleName?.toLowerCase() !== "admin") {
     return (
-      <div className="min-h-screen bg-[#111215] text-slate-100 flex items-center justify-center font-mono p-6">
+      <div className="min-h-screen bg-[#111215] text-slate-100 flex items-center justify-center  p-6">
         <div className="max-w-md w-full bg-[#16171a] border border-red-950/40 rounded-2xl p-6 text-center shadow-[0_0_50px_rgba(239,68,68,0.05)]">
           <span className="text-4xl">🚫</span>
           <h2 className="text-lg font-black text-red-500 mt-4 tracking-widest uppercase">ปฏิเสธการเข้าถึง</h2>
@@ -168,7 +168,7 @@ export default function MapEditorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#111215] text-slate-100 font-mono p-6 flex flex-col gap-6 selection:bg-rose-500 selection:text-white">
+    <div className="min-h-screen bg-[#111215] text-slate-100  p-6 flex flex-col gap-6 selection:bg-rose-500 selection:text-white">
       {/* Header Panel */}
       <header className="flex items-center justify-between border-b border-zinc-800 pb-4">
         <div>
@@ -192,7 +192,7 @@ export default function MapEditorPage() {
 
       {/* Main Workspace Layout */}
       <div className="flex flex-col lg:flex-row gap-6 items-stretch">
-        
+
         {/* Left Control Palette (z-10) */}
         <div className="w-full lg:w-80 bg-[#16171a] border border-zinc-800 rounded-xl p-4 flex flex-col gap-4">
           <div>
@@ -208,11 +208,10 @@ export default function MapEditorPage() {
                   onDragStart={(e) => {
                     e.dataTransfer.setData("tileId", t.tileId);
                   }}
-                  className={`relative p-1 rounded-lg border-2 aspect-square flex items-center justify-center transition-all bg-black/20 cursor-grab active:cursor-grabbing ${
-                    selectedTileId === t.tileId
+                  className={`relative p-1 rounded-lg border-2 aspect-square flex items-center justify-center transition-all bg-black/20 cursor-grab active:cursor-grabbing ${selectedTileId === t.tileId
                       ? "border-rose-500 scale-105 bg-rose-500/10 shadow-[0_0_12px_rgba(244,63,94,0.3)]"
                       : "border-zinc-800 hover:border-zinc-600"
-                  }`}
+                    }`}
                   title={`${t.name} (ลากลงตาราง หรือ คลิกเพื่อเลือก)`}
                 >
                   {t.image ? (
@@ -380,7 +379,7 @@ export default function MapEditorPage() {
             readOnly
             value={exportedJson}
             placeholder="คลิกปุ่มสร้างรหัสเพื่อดึงข้อมูลรหัสแผนที่..."
-            className="w-full h-32 bg-black/40 border border-zinc-800 rounded p-2 text-[10px] text-emerald-400 font-mono focus:outline-none resize-none"
+            className="w-full h-32 bg-black/40 border border-zinc-800 rounded p-2 text-[10px] text-emerald-400  focus:outline-none resize-none"
           />
         </div>
 
@@ -400,7 +399,7 @@ export default function MapEditorPage() {
             value={importInput}
             onChange={(e) => setImportInput(e.target.value)}
             placeholder="วางรหัส JSON เพื่อนำเข้าโครงสร้างแผนที่..."
-            className="w-full h-32 bg-black/40 border border-zinc-800 rounded p-2 text-[10px] text-zinc-300 font-mono focus:outline-none resize-none focus:border-emerald-500 transition-colors"
+            className="w-full h-32 bg-black/40 border border-zinc-800 rounded p-2 text-[10px] text-zinc-300  focus:outline-none resize-none focus:border-emerald-500 transition-colors"
           />
         </div>
       </div>

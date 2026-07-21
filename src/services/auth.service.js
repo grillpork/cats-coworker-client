@@ -56,5 +56,9 @@ export const authServices = {
     updateSp: async (sp) => {
         const res = await api.put('/api/user/sp', { sp });
         return res;
+    },
+    getStorageInfo: async () => {
+        const res = await api.get('/api/user/storage-info');
+        return res;
     }
 }

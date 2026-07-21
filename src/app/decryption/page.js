@@ -176,7 +176,7 @@ export default function DecryptionPage() {
 
         const primaryTestCase = currentLevel.testCases[0];
         const resultOutput = userFunc(...(primaryTestCase ? primaryTestCase.input : []));
-        
+
         if (typeof resultOutput === "string") {
           outputStr = resultOutput.padEnd(6, " ").substring(0, 6);
         } else if (resultOutput !== undefined) {
@@ -217,7 +217,7 @@ export default function DecryptionPage() {
             });
           }
         }
-        
+
         setSpPoints((prev) => prev + 100);
         setCandyProgress((prev) => Math.min(prev + 15, 100));
 
@@ -258,37 +258,36 @@ export default function DecryptionPage() {
           <div className="text-rose-500 font-black tracking-widest text-base">
             💻 เทอร์มินัลถอดรหัส - {currentLevel?.title || "ระดับปัจจุบัน"}
           </div>
-          <div className={`text-xs font-black px-4 py-2 rounded-lg border tracking-wider ${
-            timeLeft < 10 ? "text-red-400 border-red-500/20 bg-red-500/10 animate-pulse" : "text-amber-400 border-zinc-800 bg-zinc-900/50"
-          }`}>
+          <div className={`text-xs font-black px-4 py-2 rounded-lg border tracking-wider ${timeLeft < 10 ? "text-red-400 border-red-500/20 bg-red-500/10 animate-pulse" : "text-amber-400 border-zinc-800 bg-zinc-900/50"
+            }`}>
             ⏱️ ล็อกดาวน์ใน: {formatTime(timeLeft)}
           </div>
         </div>
-        
+
         <div className="flex-1 overflow-hidden relative bg-[#141517] p-8 flex flex-col items-center gap-6">
-          
+
           <div className="flex flex-col items-center gap-4 w-full max-w-xl">
             {/* Dashboard from Server Map */}
             <div className="w-full bg-[#101114]/80 backdrop-blur-md border border-zinc-900 rounded-2xl p-4 flex flex-col items-center gap-3 shadow-2xl">
-              <div className="flex items-center justify-between w-full font-mono text-[11px] text-zinc-400 border-b border-zinc-900 pb-2.5">
+              <div className="flex items-center justify-between w-full  text-[11px] text-zinc-400 border-b border-zinc-900 pb-2.5">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="font-bold tracking-wider">เซิร์ฟเวอร์ A</span>
                 </div>
-                <div className="text-zinc-500">เวลาทำงาน: <span className="text-amber-500 font-bold font-mono">{serverTime} วินาที</span></div>
+                <div className="text-zinc-500">เวลาทำงาน: <span className="text-amber-500 font-bold ">{serverTime} วินาที</span></div>
                 <div>
-                  แต้มสะสม: <span className="text-emerald-400 font-black font-mono">{spPoints} SP</span>
+                  แต้มสะสม: <span className="text-emerald-400 font-black ">{spPoints} SP</span>
                 </div>
               </div>
 
               <div className="w-full font-sans text-xs space-y-2">
                 <div className="flex justify-between text-zinc-500 font-bold text-[10px] uppercase tracking-wider">
                   <span>ความก้าวหน้าการผลิตลูกอม</span>
-                  <span className="text-zinc-300 font-mono">10% ⇒ {candyProgress}%</span>
+                  <span className="text-zinc-300 ">10% ⇒ {candyProgress}%</span>
                 </div>
                 <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800/50">
-                  <div 
-                    className="h-full bg-gradient-to-r from-rose-500 to-rose-400 rounded-full transition-all duration-500" 
+                  <div
+                    className="h-full bg-gradient-to-r from-rose-500 to-rose-400 rounded-full transition-all duration-500"
                     style={{ width: `${candyProgress}%` }}
                   />
                 </div>
@@ -300,7 +299,7 @@ export default function DecryptionPage() {
               <span className="text-[10px] text-rose-500 font-black tracking-widest uppercase bg-rose-500/10 border border-rose-500/20 px-2.5 py-0.5 rounded-full">
                 📡 รหัสผ่านเป้าหมาย
               </span>
-              <div className="text-4xl font-black tracking-[0.2em] text-zinc-100 drop-shadow-[0_0_10px_rgba(255,255,255,0.05)] py-2 font-mono">
+              <div className="text-4xl font-black tracking-[0.2em] text-zinc-100 drop-shadow-[0_0_10px_rgba(255,255,255,0.05)] py-2 ">
                 {formattedCipherText || "???"}
               </div>
               <div className="text-[11px] text-zinc-400 font-medium tracking-wide bg-zinc-900/60 border border-zinc-850 px-3 py-1 rounded-lg">
@@ -321,16 +320,16 @@ export default function DecryptionPage() {
 
           {gameStatus !== "idle" && (
             <div className="w-full max-w-4xl flex-1 min-h-0">
-               <CodeEditor
-                 code={activeCode}
-                 onCodeChange={handleCodeChange}
-                 onRun={runTestCases}
-                 isRunning={isRunning}
-                 editorRef={editorRef}
-                 description={currentLevel?.description}
-                 onClose={() => router.push("/")}
-                 isFullScreen={true}
-               />
+              <CodeEditor
+                code={activeCode}
+                onCodeChange={handleCodeChange}
+                onRun={runTestCases}
+                isRunning={isRunning}
+                editorRef={editorRef}
+                description={currentLevel?.description}
+                onClose={() => router.push("/")}
+                isFullScreen={true}
+              />
             </div>
           )}
         </div>
@@ -340,7 +339,7 @@ export default function DecryptionPage() {
       {gameResult && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className={`max-w-sm w-full bg-[#101114] border ${gameResult.status === 'success' ? 'border-emerald-500/20' : 'border-red-500/20'} rounded-3xl p-6 relative flex flex-col gap-4 font-sans shadow-2xl text-center`}>
-            
+
             {gameResult.status === 'success' ? (
               <>
                 <div className="mx-auto w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mb-1">
@@ -356,7 +355,7 @@ export default function DecryptionPage() {
                 <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 my-1 text-left space-y-2.5">
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-zinc-500">รางวัลที่ได้รับ:</span>
-                    <span className="text-emerald-400 font-bold font-mono">+{gameResult.sp} SP</span>
+                    <span className="text-emerald-400 font-bold ">+{gameResult.sp} SP</span>
                   </div>
 
                   {gameResult.cat && (
@@ -402,7 +401,7 @@ export default function DecryptionPage() {
                 <p className="text-zinc-400 text-xs leading-relaxed">
                   ระบบตรวจพบผลลัพธ์ของฟังก์ชันไม่ถูกต้องตามชุดทดสอบ
                 </p>
-                <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-4 my-1 text-xs text-red-400 leading-relaxed text-center font-mono">
+                <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-4 my-1 text-xs text-red-400 leading-relaxed text-center ">
                   {gameResult.error}
                 </div>
 

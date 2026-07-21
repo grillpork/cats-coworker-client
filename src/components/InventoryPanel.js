@@ -32,7 +32,7 @@ export default function InventoryPanel({
   onUpgradeCat,
 }) {
   return (
-    <div className="w-full max-w-4xl bg-[#202124]/40 border border-zinc-800/80 rounded-lg p-2.5 font-mono text-xs flex flex-col gap-2 mx-auto">
+    <div className="w-full max-w-4xl bg-[#202124]/40 border border-zinc-800/80 rounded-lg p-2.5  text-xs flex flex-col gap-2 mx-auto">
       {inventory.length === 0 ? (
         <div className="text-zinc-600 italic py-2 text-center text-[10px]">
           No cats in inventory. Solve decryption to summon cats!
@@ -57,18 +57,18 @@ export default function InventoryPanel({
                 title="Drag to Desk or Click to Select"
               >
                 <div className="flex items-end justify-center bg-black/30 rounded-full border border-zinc-700/50 w-14 h-14 mt-1">
-                  <img 
-                    src={getCatImage(cat)} 
-                    alt={cat.name} 
+                  <img
+                    src={getCatImage(cat)}
+                    alt={cat.name}
                     className={`w-10 h-10 object-contain z-20 mb-1.5 ${getAuraClass(cat.rarity)}`}
                   />
-                  <img 
-                    src="/computer.png" 
-                    alt="computer" 
+                  <img
+                    src="/computer.png"
+                    alt="computer"
                     className="w-8 h-8 object-contain z-10 -ml-4 mb-1"
                   />
                 </div>
-                
+
                 <div className="w-full flex flex-col items-center justify-center mb-1">
                   <div className="text-zinc-300 truncate text-[11px] font-bold w-full text-center">
                     {cat.name}

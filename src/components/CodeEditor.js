@@ -13,7 +13,7 @@ export default function CodeEditor({
   isFullScreen = false
 }) {
   return (
-    <div className={`${isFullScreen ? "w-full h-full bg-[#17181a] border border-zinc-800 rounded-lg shadow-2xl" : "fixed bottom-6 left-6 z-40 w-[550px] max-w-full h-80 bg-[#202124]/95 backdrop-blur-md border border-zinc-800 rounded-lg shadow-2xl"} flex flex-col overflow-hidden text-slate-100 font-mono`}>
+    <div className={`${isFullScreen ? "w-full h-full bg-[#17181a] border border-zinc-800 rounded-lg shadow-2xl" : "fixed bottom-6 left-6 z-40 w-[550px] max-w-full h-80 bg-[#202124]/95 backdrop-blur-md border border-zinc-800 rounded-lg shadow-2xl"} flex flex-col overflow-hidden text-slate-100 `}>
       {/* Header Info Bar */}
       <div className="flex items-center justify-between px-3 py-2 bg-[#17181a] border-b border-zinc-800 select-none">
         <div className="flex items-center gap-2">

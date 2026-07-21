@@ -21,11 +21,10 @@ export default function Sidebar({
             <button
               key={level.id}
               onClick={() => onSelectLevel(idx)}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded text-sm font-mono transition-all ${
-                isCurrent 
-                  ? "bg-[#2d2f34] text-white border-l-4 border-emerald-500" 
+              className={`w-full flex items-center justify-between px-4 py-3 rounded text-sm  transition-all ${isCurrent
+                  ? "bg-[#2d2f34] text-white border-l-4 border-emerald-500"
                   : "bg-[#202124] text-zinc-400 hover:bg-[#25262a]"
-              }`}
+                }`}
             >
               <span>LV {level.id}</span>
               {status === "pass" && (

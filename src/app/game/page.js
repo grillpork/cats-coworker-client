@@ -29,7 +29,7 @@ const playSoundEffect = (type) => {
     const ctx = new AudioContext();
     const osc = ctx.createOscillator();
     const gainNode = ctx.createGain();
-    
+
     osc.connect(gainNode);
     gainNode.connect(ctx.destination);
 
@@ -162,7 +162,7 @@ export function DecryptionGameContent() {
     };
     loadCats();
   }, [isAuthenticated]);
-  
+
   // Game states
   const [userCodes, setUserCodes] = useState({});
   const [levelStatus, setLevelStatus] = useState({});
@@ -171,7 +171,7 @@ export function DecryptionGameContent() {
   const [timeLeft, setTimeLeft] = useState(60); // 60s timer
   const [activeTestCaseIdx, setActiveTestCaseIdx] = useState(0);
   const [isGameActive, setIsGameActive] = useState(false);
-  
+
   // Custom Game Tab and SP Systems
   const [activeTab, setActiveTab] = useState("shop"); // "terminal", "shop"
   const [showInventoryModal, setShowInventoryModal] = useState(false);
@@ -320,14 +320,14 @@ export function DecryptionGameContent() {
   const handleSelectCat = (invIdx) => {
     const catToHold = inventory[invIdx];
     const nextInv = [...inventory];
-    
+
     if (heldCat) {
       // Swap held cat back to inventory
       nextInv[invIdx] = heldCat;
     } else {
       nextInv.splice(invIdx, 1);
     }
-    
+
     setHeldCat(catToHold);
     setInventory(nextInv);
     setShowInventoryModal(false);
@@ -589,7 +589,7 @@ export function DecryptionGameContent() {
   const runTestCases = () => {
     if (!currentLevel) return;
     setIsRunning(true);
-    
+
     setConsoleHistory((prev) => [
       ...prev,
       { type: "cmd", text: `run getPassword() for Level ${currentLevel.id}` },
@@ -613,7 +613,7 @@ export function DecryptionGameContent() {
         const primaryTestCase = currentLevel.testCases[0];
         const testCaseInput = primaryTestCase ? primaryTestCase.input : [];
         const resultOutput = userFunc(...testCaseInput);
-        
+
         if (typeof resultOutput === "string") {
           outputStr = resultOutput.padEnd(6, " ").substring(0, 6);
         } else if (resultOutput !== undefined) {
@@ -649,7 +649,7 @@ export function DecryptionGameContent() {
         if (catPool.length > 0) {
           rolledCat = { ...catPool[Math.floor(Math.random() * catPool.length)], id: Date.now() };
         }
-        
+
         newHistoryLogs.push({
           type: "success",
           text: `Level ${currentLevel.id} decrypted! Password: ${outputStr}`,
@@ -677,7 +677,7 @@ export function DecryptionGameContent() {
           text: `Level ${currentLevel.id} verification failed.`,
         });
         setLevelStatus({ ...levelStatus, [currentLevel.id]: "fail" });
-        
+
         // Show Failure Modal
         setGameResult({
           status: "fail",
@@ -783,14 +783,14 @@ export function DecryptionGameContent() {
     return (
       <div className="w-screen h-screen bg-[#0a0b0d] text-slate-100 font-sans flex flex-col items-center justify-center gap-4">
         <div className="w-10 h-10 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs font-mono text-zinc-500 tracking-wider">LOADING SERVER ROOM...</p>
+        <p className="text-xs  text-zinc-500 tracking-wider">LOADING SERVER ROOM...</p>
       </div>
     );
   }
 
   return (
     <main className="relative w-screen h-screen bg-[#101114] text-slate-100 font-sans overflow-hidden select-none">
-      
+
       {/* 1. Fullscreen Server Room Map (Background z-0) */}
       <ServerRoomMap
         deployedCats={deployedCats}
@@ -828,8 +828,8 @@ export function DecryptionGameContent() {
       />
 
       {/* 2.5. Floating Top-Right User & Utility Panel (z-40) */}
-      <div className="fixed top-4 right-4 z-40 flex flex-col items-end gap-3 font-mono text-xs select-none">
-        
+      <div className="fixed top-4 right-4 z-40 flex flex-col items-end gap-3  text-xs select-none">
+
         {/* Horizontal Row: Skip Tutorial, Coin display, Avatar */}
         <div className="flex items-center gap-2.5">
           {/* Home Button */}
@@ -849,7 +849,7 @@ export function DecryptionGameContent() {
           </Link>
 
           {/* Settings Button */}
-          <button 
+          <button
             onClick={() => {
               setConsoleHistory((prev) => [
                 ...prev,
@@ -862,7 +862,7 @@ export function DecryptionGameContent() {
           </button>
 
           {/* Skip Tutorial Button */}
-          <button 
+          <button
             onClick={() => {
               setConsoleHistory((prev) => [
                 ...prev,
@@ -884,14 +884,14 @@ export function DecryptionGameContent() {
 
           {/* User Profile Avatar Bubble / Login Button */}
           {!isAuthenticated ? (
-            <Link 
+            <Link
               href="/auth/sign-in"
               className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white border border-blue-700 rounded-full font-bold text-[9px] uppercase tracking-wider shadow-lg active:scale-95 transition-all flex items-center gap-1"
             >
               🔑 Log In
             </Link>
           ) : (
-            <div 
+            <div
               ref={userDropdownRef}
               className="relative cursor-pointer"
               onClick={() => setShowFriendBonusTooltip(prev => !prev)}
@@ -928,7 +928,7 @@ export function DecryptionGameContent() {
                       <Users className="w-3.5 h-3.5 text-blue-400" />
                       Village Booster
                     </div>
-                    
+
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-lg font-black text-white bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
                         +{friendCount * 10}%
@@ -944,7 +944,7 @@ export function DecryptionGameContent() {
                   {/* Action Buttons */}
                   <div className="flex flex-col gap-2 pt-1 border-t border-zinc-800/60">
                     <div className="flex items-center gap-1.5">
-                      <button 
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           if (friendCount < 10) {
@@ -957,7 +957,7 @@ export function DecryptionGameContent() {
                         ➕ Invite Friend
                       </button>
                       {friendCount > 0 && (
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setFriendCount(0);
@@ -969,7 +969,7 @@ export function DecryptionGameContent() {
                         </button>
                       )}
                     </div>
-                    
+
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1002,7 +1002,7 @@ export function DecryptionGameContent() {
             </button>
             {/* Progress Bar */}
             <div className="w-10 h-2 bg-zinc-700 rounded-full overflow-hidden border border-zinc-800">
-              <div 
+              <div
                 className="h-full bg-lime-500 transition-all duration-500"
                 style={{ width: `${Math.min(100, (spPoints / (playerLevel * 1000)) * 100)}%` }}
               />
@@ -1064,7 +1064,7 @@ export function DecryptionGameContent() {
         <div className="absolute -top-9 left-6 right-6 flex justify-around select-none z-10">
           {inventory.slice(0, 5).map((cat, i) => {
             return (
-              <img 
+              <img
                 key={`cat-${cat.id || ''}-${i}`}
                 src={cat.image || `/cats/cat-${cat.rarity.toLowerCase()}.png`}
                 alt={cat.name}
@@ -1100,7 +1100,7 @@ export function DecryptionGameContent() {
       ) : (
         <button
           onClick={() => setIsConsoleOpen(true)}
-          className="fixed bottom-6 right-6 z-30 px-3 py-1.5 bg-slate-900 border border-slate-800 hover:border-emerald-500 rounded-lg shadow-xl text-[10px] font-mono text-emerald-400 font-bold active:scale-95 transition-all flex items-center gap-1.5"
+          className="fixed bottom-6 right-6 z-30 px-3 py-1.5 bg-slate-900 border border-slate-800 hover:border-emerald-500 rounded-lg shadow-xl text-[10px]  text-emerald-400 font-bold active:scale-95 transition-all flex items-center gap-1.5"
         >
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>Show Logs</span>
@@ -1116,14 +1116,14 @@ export function DecryptionGameContent() {
       {/* 7. Rebirth Modal (z-50) */}
       {showRebirthModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#17181a] border-2 border-blue-500 rounded-2xl p-6 shadow-[0_0_40px_rgba(59,130,246,0.3)] w-80 font-mono flex flex-col items-center text-center">
+          <div className="bg-[#17181a] border-2 border-blue-500 rounded-2xl p-6 shadow-[0_0_40px_rgba(59,130,246,0.3)] w-80  flex flex-col items-center text-center">
             <h2 className="text-2xl font-black text-white mb-2 tracking-widest uppercase">
               Rebirth
             </h2>
             <div className="w-16 h-16 bg-blue-500/20 border-2 border-blue-400 rounded-full flex items-center justify-center mb-4">
               <span className="text-2xl">✨</span>
             </div>
-            
+
             <p className="text-xs text-zinc-400 mb-4">
               Pay SP to level up your Main Character.
             </p>
@@ -1141,7 +1141,7 @@ export function DecryptionGameContent() {
             </div>
 
             <div className="text-sm font-bold text-yellow-400 mb-6 flex items-center gap-2">
-              Cost: {playerLevel * 1000} SP 
+              Cost: {playerLevel * 1000} SP
               <span className="text-[16px]">🪙</span>
             </div>
 
@@ -1166,11 +1166,10 @@ export function DecryptionGameContent() {
                   }
                 }}
                 disabled={spPoints < playerLevel * 1000}
-                className={`flex-1 py-2 font-black rounded-lg transition-all text-sm uppercase ${
-                  spPoints >= playerLevel * 1000
+                className={`flex-1 py-2 font-black rounded-lg transition-all text-sm uppercase ${spPoints >= playerLevel * 1000
                     ? "bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] active:scale-95"
                     : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
-                }`}
+                  }`}
               >
                 Level Up
               </button>
@@ -1195,8 +1194,8 @@ export function DecryptionGameContent() {
             >
               ✕
             </button>
-            
-            <h2 className="text-xl font-black font-mono text-white mb-4 flex items-center gap-2">
+
+            <h2 className="text-xl font-black  text-white mb-4 flex items-center gap-2">
               <span className="text-2xl drop-shadow-md">🎒</span> INVENTORY
             </h2>
 
@@ -1214,7 +1213,7 @@ export function DecryptionGameContent() {
       {gameResult && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className={`max-w-sm w-full bg-[#101114] border ${gameResult.status === 'success' ? 'border-emerald-500/20' : 'border-red-500/20'} rounded-3xl p-6 relative flex flex-col gap-4 font-sans shadow-2xl text-center`}>
-            
+
             {gameResult.status === 'success' ? (
               <>
                 <div className="mx-auto w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mb-1">
@@ -1230,7 +1229,7 @@ export function DecryptionGameContent() {
                 <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 my-1 text-left space-y-2.5">
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-zinc-500">รางวัลที่ได้รับ:</span>
-                    <span className="text-emerald-400 font-bold font-mono">+{gameResult.sp} SP</span>
+                    <span className="text-emerald-400 font-bold ">+{gameResult.sp} SP</span>
                   </div>
 
                   {gameResult.cat && (
@@ -1275,7 +1274,7 @@ export function DecryptionGameContent() {
                 <p className="text-zinc-400 text-xs leading-relaxed">
                   ระบบตรวจพบผลลัพธ์ของฟังก์ชันไม่ถูกต้องตามชุดทดสอบ
                 </p>
-                <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-4 my-1 text-xs text-red-400 leading-relaxed text-center font-mono">
+                <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-4 my-1 text-xs text-red-400 leading-relaxed text-center ">
                   {gameResult.error}
                 </div>
 
@@ -1331,12 +1330,12 @@ class GameErrorBoundary extends React.Component {
           <div className="text-4xl">🔴</div>
           <h1 className="text-xl font-black text-red-400">เกิดข้อผิดพลาดในหน้าเกม</h1>
           <div className="max-w-2xl w-full bg-zinc-900 border border-zinc-800 rounded-xl p-6 overflow-auto max-h-[60vh]">
-            <p className="text-xs font-mono text-red-400 mb-3 font-bold">Error Message:</p>
-            <pre className="text-xs font-mono text-zinc-300 whitespace-pre-wrap break-words mb-4">
+            <p className="text-xs  text-red-400 mb-3 font-bold">Error Message:</p>
+            <pre className="text-xs  text-zinc-300 whitespace-pre-wrap break-words mb-4">
               {this.state.error?.toString()}
             </pre>
-            <p className="text-xs font-mono text-red-400 mb-3 font-bold">Component Stack:</p>
-            <pre className="text-[10px] font-mono text-zinc-500 whitespace-pre-wrap break-words">
+            <p className="text-xs  text-red-400 mb-3 font-bold">Component Stack:</p>
+            <pre className="text-[10px]  text-zinc-500 whitespace-pre-wrap break-words">
               {this.state.errorInfo?.componentStack}
             </pre>
           </div>
@@ -1368,7 +1367,7 @@ export default function DecryptionGame() {
       <Suspense fallback={
         <div className="w-screen h-screen bg-[#0a0b0d] text-slate-100 font-sans flex flex-col items-center justify-center gap-4">
           <div className="w-10 h-10 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-mono text-zinc-500 tracking-wider">LOADING INTERFACE...</p>
+          <p className="text-xs  text-zinc-500 tracking-wider">LOADING INTERFACE...</p>
         </div>
       }>
         <DecryptionGameContent />

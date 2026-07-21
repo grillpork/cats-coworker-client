@@ -43,20 +43,20 @@ const playCoinSound = () => {
     const ctx = new AudioContext();
     const osc = ctx.createOscillator();
     const gainNode = ctx.createGain();
-    
+
     osc.type = "sine";
     // Pitch goes up (B5 to E6) like a classic coin sound
-    osc.frequency.setValueAtTime(987.77, ctx.currentTime); 
-    osc.frequency.exponentialRampToValueAtTime(1318.51, ctx.currentTime + 0.1); 
-    
+    osc.frequency.setValueAtTime(987.77, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1318.51, ctx.currentTime + 0.1);
+
     // Quick attack, exponential release
     gainNode.gain.setValueAtTime(0, ctx.currentTime);
     gainNode.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.02);
     gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-    
+
     osc.connect(gainNode);
     gainNode.connect(ctx.destination);
-    
+
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.3);
   } catch (e) {
@@ -150,20 +150,12 @@ export default function ServerRoomMap({
     loadMapData();
   }, [selectedMap]);
 
-  // Initialize and handle window resizing
+  // Initialize and handle window resizing - Fixed dimensions locked to avoid coordinate shifts
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const handleResize = () => {
-      setDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
-
-    handleResize(); // run once initially
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    setDimensions({
+      width: 1680,
+      height: 1104,
+    });
   }, []);
 
   // WebSocket connection for real-time multiplayer
@@ -377,7 +369,7 @@ export default function ServerRoomMap({
           const friendCenterX = friend.x + playerSize / 2;
           const friendCenterY = friend.y + playerSize / 2;
           const dist = Math.hypot(playerCenterX - friendCenterX, playerCenterY - friendCenterY);
-          
+
           if (dist < minDistance) {
             minDistance = dist;
             closestFriend = friend;
@@ -391,9 +383,9 @@ export default function ServerRoomMap({
 
           try {
             const catId = heldCat.catId || heldCat.id;
-            
+
             await catsService.giftCat(closestFriend.id, catId);
-            
+
             // Notify WebSocket server about successful gift
             if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
               socketRef.current.send(
@@ -410,7 +402,7 @@ export default function ServerRoomMap({
             if (setHeldCat) {
               setHeldCat(null);
             }
-            
+
             alert(`🎁 มอบแมว "${heldCat.name}" ให้กับ "${closestFriend.username}" เรียบร้อยแล้ว!`);
           } catch (err) {
             console.error(err);
@@ -608,7 +600,7 @@ export default function ServerRoomMap({
         if (dist < 85) {
           onHarvestSP(i, accumulatedSp[i]);
           playCoinSound();
-          
+
           // Spawn scattering particles
           const newParticles = Array.from({ length: 4 }).map(() => {
             const angle = Math.random() * Math.PI * 2;
@@ -629,11 +621,10 @@ export default function ServerRoomMap({
   }, [playerPos, accumulatedSp, dimensions]);
 
   return (
-    <div 
-      ref={mapRef} 
-      className={`fixed inset-0 w-screen h-screen z-10 overflow-hidden select-none transition-colors duration-500 ${
-        isDayShift ? "bg-[#25262a]" : "bg-[#161719]"
-      }`}
+    <div
+      ref={mapRef}
+      className={`fixed inset-0 w-screen h-screen z-10 overflow-hidden select-none transition-colors duration-500 ${isDayShift ? "bg-[#25262a]" : "bg-[#161719]"
+        }`}
     >
       {/* Zoomable Game Canvas */}
       <div
@@ -661,7 +652,7 @@ export default function ServerRoomMap({
               const mapCols = customMap ? customMap.cols : Math.ceil(dimensions.width / tileSize);
               const mapRows = customMap ? customMap.rows : Math.ceil(dimensions.height / tileSize);
               const tiles = [];
-              
+
               for (let r = 0; r < mapRows; r++) {
                 for (let c = 0; c < mapCols; c++) {
                   let imgSrc = "";
@@ -755,7 +746,7 @@ export default function ServerRoomMap({
               return tiles;
             }, [customMap, dimensions])}
           </div>
-          
+
           {/* Ambient Room Lighting */}
           {isDayShift ? (
             <>
@@ -771,7 +762,7 @@ export default function ServerRoomMap({
 
           {/* Render SP Particles */}
           {particles.map(p => (
-            <Particle 
+            <Particle
               key={p.id}
               startX={p.startX}
               startY={p.startY}
@@ -781,7 +772,7 @@ export default function ServerRoomMap({
           ))}
 
           {/* Stationary Server Work Desks Grid (Placed on map floor, z-5) */}
-          <div 
+          <div
             className="absolute z-5"
             style={{
               left: `${mapW / 2 - 580}px`,
@@ -832,19 +823,19 @@ export default function ServerRoomMap({
               >
                 {heldCat ? (
                   <div className="absolute -top-16 flex flex-col items-center animate-bounce">
-                    <span className="text-[8px] bg-black/80 text-white px-2 py-0.5 rounded-full mb-0.5 whitespace-nowrap border border-zinc-700 font-mono drop-shadow-md">
+                    <span className="text-[8px] bg-black/80 text-white px-2 py-0.5 rounded-full mb-0.5 whitespace-nowrap border border-zinc-700  drop-shadow-md">
                       Press 'E' to place
                     </span>
-                    <img 
-                      src={heldCat.image || `/cats/cat-${heldCat.rarity.toLowerCase()}.png`} 
-                      alt="Held Cat" 
+                    <img
+                      src={heldCat.image || `/cats/cat-${heldCat.rarity.toLowerCase()}.png`}
+                      alt="Held Cat"
                       className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
                     />
                   </div>
                 ) : (
                   nearSlotIdx !== -1 && deployedCats[nearSlotIdx] && (
                     <div className="absolute -top-8 flex flex-col items-center animate-pulse">
-                      <span className="text-[8px] bg-black/80 text-white px-2 py-0.5 rounded-full whitespace-nowrap border border-zinc-700 font-mono drop-shadow-md">
+                      <span className="text-[8px] bg-black/80 text-white px-2 py-0.5 rounded-full whitespace-nowrap border border-zinc-700  drop-shadow-md">
                         Press 'E' to pick up
                       </span>
                     </div>
@@ -869,15 +860,15 @@ export default function ServerRoomMap({
             >
               {p.heldCat && (
                 <div className="absolute -top-16 flex flex-col items-center animate-bounce">
-                  <img 
-                    src={p.heldCat.image || `/cats/cat-${p.heldCat.rarity.toLowerCase()}.png`} 
-                    alt="Held Cat" 
+                  <img
+                    src={p.heldCat.image || `/cats/cat-${p.heldCat.rarity.toLowerCase()}.png`}
+                    alt="Held Cat"
                     className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
                   />
                 </div>
               )}
               <div className="absolute -top-6 flex flex-col items-center">
-                <span className="text-[8px] bg-black/85 text-blue-300 px-2 py-0.5 rounded-full mb-0.5 whitespace-nowrap border border-blue-900/55 font-mono font-bold drop-shadow-md">
+                <span className="text-[8px] bg-black/85 text-blue-300 px-2 py-0.5 rounded-full mb-0.5 whitespace-nowrap border border-blue-900/55  font-bold drop-shadow-md">
                   {p.username}
                 </span>
               </div>
@@ -888,7 +879,7 @@ export default function ServerRoomMap({
       </div>
 
       {/* Zoom UI Controller Overlay (z-20) */}
-      <div className="absolute top-4 left-4 z-20 bg-[#17181a]/90 backdrop-blur-md border border-zinc-800 rounded-lg p-1.5 flex items-center gap-1.5 shadow-xl font-mono text-[9px]">
+      <div className="absolute top-4 left-4 z-20 bg-[#17181a]/90 backdrop-blur-md border border-zinc-800 rounded-lg p-1.5 flex items-center gap-1.5 shadow-xl  text-[9px]">
         <button
           onClick={() => setZoom((prev) => Math.max(0.5, prev - 0.1))}
           className="w-5 h-5 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all text-white rounded font-bold text-xs"
@@ -915,22 +906,22 @@ export default function ServerRoomMap({
       {/* Online Players List Overlay (Top-Left, z-20) */}
       <div className="absolute top-16 left-4 z-20 bg-[#17181a]/95 backdrop-blur-md border border-zinc-800 rounded-2xl p-4 w-60 shadow-2xl flex flex-col gap-2.5 font-sans select-none">
         <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2 mb-0.5">
-          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1.5 ">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             Online Players ({Object.keys(otherPlayers).length + 1})
           </span>
         </div>
-        
+
         <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-0.5 custom-scrollbar">
           {/* Current Player (Me) */}
           <div className="flex items-center justify-between bg-rose-500/5 border border-rose-500/10 rounded-xl p-2.5">
             <div className="flex items-center gap-2 truncate">
-              <div className="w-5 h-5 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-[9px] font-black text-rose-400 font-mono">
+              <div className="w-5 h-5 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-[9px] font-black text-rose-400 ">
                 ME
               </div>
               <span className="text-xs font-bold text-slate-200 truncate">{user?.name || user?.username || "You"}</span>
             </div>
-            <span className="text-[10px] font-black text-yellow-400 font-mono">
+            <span className="text-[10px] font-black text-yellow-400 ">
               🪙 {spPoints.toLocaleString()}
             </span>
           </div>
@@ -939,12 +930,12 @@ export default function ServerRoomMap({
           {Object.values(otherPlayers).map((player) => (
             <div key={player.id} className="flex items-center justify-between bg-zinc-900/40 border border-zinc-800/40 rounded-xl p-2.5">
               <div className="flex items-center gap-2 truncate">
-                <div className="w-5 h-5 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-[9px] font-black text-blue-400 font-mono">
+                <div className="w-5 h-5 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-[9px] font-black text-blue-400 ">
                   PL
                 </div>
                 <span className="text-xs text-zinc-300 truncate">{player.username}</span>
               </div>
-              <span className="text-[10px] font-black text-yellow-400 font-mono">
+              <span className="text-[10px] font-black text-yellow-400 ">
                 🪙 {(player.sp || 0).toLocaleString()}
               </span>
             </div>

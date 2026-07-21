@@ -16,8 +16,8 @@ export default function TopNavbar({ isAuthenticated, user }) {
   return (
     <div className="flex items-center justify-between w-full z-20 mb-4">
       {/* Profile Area */}
-      <div 
-        onClick={() => handleAction()} 
+      <div
+        onClick={() => handleAction()}
         className="flex items-center gap-3 bg-[#0d47a1]/70 border-4 border-white/95 rounded-full py-1.5 pl-2 pr-5 shadow-lg backdrop-blur-sm cursor-pointer"
       >
         <div className="w-10 h-10 rounded-full bg-gradient-to-b from-yellow-300 to-amber-500 border-2 border-white flex items-center justify-center font-black text-white text-base shadow-md drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)]">
@@ -37,9 +37,9 @@ export default function TopNavbar({ isAuthenticated, user }) {
       <div className="flex items-center gap-3.5">
         <div className="flex items-center gap-2 bg-[#0d47a1]/70 border-[3px] border-white rounded-full py-1 px-3.5 shadow-md">
           <Zap size={16} className="text-yellow-400" />
-          <span className="text-white font-black text-xs font-mono drop-shadow">48/48</span>
-          <span 
-            onClick={() => handleAction(() => alert("Energy Purchased!"))} 
+          <span className="text-white font-black text-xs  drop-shadow">48/48</span>
+          <span
+            onClick={() => handleAction(() => alert("Energy Purchased!"))}
             className="text-yellow-300 font-extrabold text-xs cursor-pointer hover:scale-110 transition"
           >
             +
@@ -47,11 +47,11 @@ export default function TopNavbar({ isAuthenticated, user }) {
         </div>
         <div className="flex items-center gap-2 bg-[#0d47a1]/70 border-[3px] border-white rounded-full py-1 px-3.5 shadow-md">
           <Coins size={16} className="text-yellow-400" />
-          <span className="text-white font-black text-xs font-mono drop-shadow">
+          <span className="text-white font-black text-xs  drop-shadow">
             {isAuthenticated && user?.sp !== undefined ? user.sp.toLocaleString() : "0"}
           </span>
-          <span 
-            onClick={() => handleAction(() => alert("Coins Purchased!"))} 
+          <span
+            onClick={() => handleAction(() => alert("Coins Purchased!"))}
             className="text-yellow-300 font-extrabold text-xs cursor-pointer hover:scale-110 transition"
           >
             +
@@ -59,15 +59,15 @@ export default function TopNavbar({ isAuthenticated, user }) {
         </div>
         <div className="flex items-center gap-2 bg-[#0d47a1]/70 border-[3px] border-white rounded-full py-1 px-3.5 shadow-md">
           <Gem size={16} className="text-purple-300" />
-          <span className="text-white font-black text-xs font-mono drop-shadow">1,200</span>
-          <span 
-            onClick={() => handleAction(() => alert("Gems Purchased!"))} 
+          <span className="text-white font-black text-xs  drop-shadow">1,200</span>
+          <span
+            onClick={() => handleAction(() => alert("Gems Purchased!"))}
             className="text-yellow-300 font-extrabold text-xs cursor-pointer hover:scale-110 transition"
           >
             +
           </span>
         </div>
-        <button 
+        <button
           onClick={() => {
             handleAction(() => {
               if (confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {

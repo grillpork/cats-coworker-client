@@ -44,7 +44,7 @@ export function CatComputerSVG({ color = "#4ade80", type = "standard" }) {
       <line x1="49" y1="16" x2="57" y2="16" stroke="#34d399" strokeWidth="1.2" />
       <line x1="49" y1="19" x2="61" y2="19" stroke="#34d399" strokeWidth="1.2" />
       <line x1="49" y1="22" x2="54" y2="22" stroke="#34d399" strokeWidth="1.2" />
-      
+
       {/* Computer Stand */}
       <rect x="54" y="28" width="4" height="6" fill="#64748b" />
       <rect x="50" y="34" width="12" height="4" fill="#475569" />
@@ -53,7 +53,7 @@ export function CatComputerSVG({ color = "#4ade80", type = "standard" }) {
       <rect x="14" y="18" width="3" height="14" fill="#334155" rx="1" />
       <rect x="12" y="32" width="18" height="3" fill="#475569" rx="1" />
       <line x1="20" y1="35" x2="20" y2="44" stroke="#334155" strokeWidth="2" />
-      
+
       {/* Cat body */}
       <rect x="16" y="24" width="16" height="12" rx="3" fill={catColor} />
       {/* Cat Head */}
@@ -91,7 +91,7 @@ export default function CatWorkingGrid({
       <div className="grid grid-cols-3 gap-8 max-w-6xl w-full mt-2">
         {Array.from({ length: 6 }).map((_, zoneIdx) => {
           const isSelf = zoneIdx === myAssignedSlotIndex;
-          
+
           let ownerName = "สำรอง (Free Zone)";
           let isOccupied = false;
 
@@ -109,22 +109,20 @@ export default function CatWorkingGrid({
           return (
             <div
               key={zoneIdx}
-              className={`relative p-3 rounded-2xl border-4 transition-all flex flex-col items-center justify-between shadow-2xl ${
-                isSelf
+              className={`relative p-3 rounded-2xl border-4 transition-all flex flex-col items-center justify-between shadow-2xl ${isSelf
                   ? "border-emerald-500/80 bg-emerald-950/35 shadow-[0_0_30px_rgba(16,185,129,0.3)]"
                   : isOccupied
-                  ? "border-blue-500/70 bg-blue-950/30 shadow-[0_0_25px_rgba(59,130,246,0.25)]"
-                  : "border-[#8B5A2B]/90 bg-[#3a2818]/60 shadow-inner"
-              }`}
+                    ? "border-blue-500/70 bg-blue-950/30 shadow-[0_0_25px_rgba(59,130,246,0.25)]"
+                    : "border-[#8B5A2B]/90 bg-[#3a2818]/60 shadow-inner"
+                }`}
             >
               {/* Zone Header Badge */}
-              <div className={`px-3 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider mb-2 flex items-center gap-1.5 border shadow-lg ${
-                isSelf
+              <div className={`px-3 py-1 rounded-full text-[10px]  font-bold tracking-wider mb-2 flex items-center gap-1.5 border shadow-lg ${isSelf
                   ? "bg-emerald-500/25 text-emerald-300 border-emerald-500/60"
                   : isOccupied
-                  ? "bg-blue-500/25 text-blue-300 border-blue-500/60"
-                  : "bg-zinc-900/90 text-zinc-400 border-zinc-700/60"
-              }`}>
+                    ? "bg-blue-500/25 text-blue-300 border-blue-500/60"
+                    : "bg-zinc-900/90 text-zinc-400 border-zinc-700/60"
+                }`}>
                 <span>{isSelf ? "🟢" : isOccupied ? "🔵" : "⚪"}</span>
                 <span>Zone {zoneIdx + 1}: <strong>{ownerName}</strong> (8 โต๊ะ)</span>
                 {isSelf && <span className="text-[8px] text-emerald-400 font-extrabold">(โซนของคุณ)</span>}
@@ -179,52 +177,49 @@ export default function CatWorkingGrid({
                           }
                         }
                       }}
-                      className={`h-24 flex flex-col items-center justify-between relative p-1 rounded-lg border border-dashed transition-all ${
-                        isSelf
+                      className={`h-24 flex flex-col items-center justify-between relative p-1 rounded-lg border border-dashed transition-all ${isSelf
                           ? "cursor-pointer hover:border-emerald-400/60 border-emerald-500/30 bg-emerald-950/10"
                           : "cursor-not-allowed border-zinc-800/40 opacity-90 bg-zinc-900/20"
-                      }`}
+                        }`}
                     >
                       {cat ? (
                         <>
                           <div className="flex flex-col items-center leading-none mt-0.5">
-                            <span className="text-[7px] font-mono font-bold tracking-wider text-zinc-400 uppercase">
+                            <span className="text-[7px]  font-bold tracking-wider text-zinc-400 uppercase">
                               {cat.rarity}
                             </span>
-                            <span className={`text-[8px] font-mono font-semibold ${
-                              cat.type === "diamond" ? "text-blue-400" : "text-emerald-400"
-                            }`}>
+                            <span className={`text-[8px]  font-semibold ${cat.type === "diamond" ? "text-blue-400" : "text-emerald-400"
+                              }`}>
                               {cat.type}
                             </span>
                           </div>
-                          
+
                           {/* Cat & Computer Sprite */}
                           <div className="flex items-end justify-center my-0.5 z-10">
-                            <img 
-                              src={getCatImage(cat)} 
-                              alt={cat.name} 
+                            <img
+                              src={getCatImage(cat)}
+                              alt={cat.name}
                               className={`w-9 h-9 object-contain z-20 ${getAuraClass(cat.rarity)}`}
                             />
-                            <img 
-                              src="/computer.png" 
-                              alt="computer" 
+                            <img
+                              src="/computer.png"
+                              alt="computer"
                               className="w-8 h-8 object-contain z-10 -ml-2"
                             />
                           </div>
 
-                          <span className="text-[7px] font-mono text-zinc-400 leading-none">
+                          <span className="text-[7px]  text-zinc-400 leading-none">
                             {cat.spRate} SP/s (LV.{cat.level || 1})
                           </span>
 
                           {/* Harvest & Upgrade */}
                           <div className="flex items-center gap-1 z-20 mb-0.5">
-                            <div className={`px-1 py-0.2 rounded text-[7px] font-mono font-bold select-none ${
-                              (accumulatedSp[globalSlotIdx] || 0) > 0
+                            <div className={`px-1 py-0.2 rounded text-[7px]  font-bold select-none ${(accumulatedSp[globalSlotIdx] || 0) > 0
                                 ? isSelf
                                   ? "bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 animate-pulse"
                                   : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/40"
                                 : "bg-zinc-800/40 text-zinc-600"
-                            }`}>
+                              }`}>
                               💰{accumulatedSp[globalSlotIdx] || 0}
                             </div>
 
@@ -252,7 +247,7 @@ export default function CatWorkingGrid({
                             <rect x="8" y="32" width="3" height="8" fill="#78350f" />
                             <rect x="53" y="32" width="3" height="8" fill="#78350f" />
                           </svg>
-                          <span className="text-[6px] font-mono text-zinc-400">
+                          <span className="text-[6px]  text-zinc-400">
                             {isSelf ? `โต๊ะ ${subIdx + 1}` : "ว่าง"}
                           </span>
                         </div>

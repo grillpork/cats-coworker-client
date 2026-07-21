@@ -205,11 +205,11 @@ export default function LobbyPage() {
 
         {/* Bottom Bar Actions */}
         <div className="flex items-center justify-between w-full z-20 mt-4 border-t-4 border-white/20 pt-4">
-          <div className="bg-[#0d47a1]/70 border-2 border-[#fff]/40 rounded-xl px-4 py-2 text-white font-mono text-[10px] max-w-sm">
+          <div className="bg-[#0d47a1]/70 border-2 border-[#fff]/40 rounded-xl px-4 py-2 text-white  text-[10px] max-w-sm">
             <Lightbulb size={14} className="inline mr-1 text-yellow-300" /> TIP: พาแมวหายาก (Epic/Legendary) ไปขุดเหรียญจะได้รับแต้ม SP ต่อวินาทีสูงขึ้นมาก!
           </div>
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => {
                 if (!isAuthenticated) {
                   router.push('/auth/sign-in');
@@ -224,7 +224,7 @@ export default function LobbyPage() {
               <Map size={18} />
               <span>Create</span>
             </button>
-            <button 
+            <button
               onClick={() => {
                 if (!isAuthenticated) {
                   router.push('/auth/sign-in');

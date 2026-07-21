@@ -20,7 +20,7 @@ export default function FloatingConsole({
   }, [history]);
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 w-96 max-w-full h-64 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-lg shadow-2xl flex flex-col overflow-hidden text-slate-100 font-mono text-xs">
+    <div className="fixed bottom-6 right-6 z-40 w-96 max-w-full h-64 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-lg shadow-2xl flex flex-col overflow-hidden text-slate-100  text-xs">
       {/* Title Bar */}
       <div className="flex items-center justify-between px-3 py-2 bg-slate-900 border-b border-slate-800 select-none">
         <div className="flex items-center gap-2">
@@ -82,7 +82,7 @@ export default function FloatingConsole({
           type="text"
           value={input}
           onChange={(e) => onInputChange(e.target.value)}
-          className="flex-1 bg-transparent border-none outline-none font-mono text-xs text-white"
+          className="flex-1 bg-transparent border-none outline-none  text-xs text-white"
           placeholder="Type console command... (run, help, clear)"
         />
       </form>

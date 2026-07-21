@@ -11,7 +11,7 @@ export default function GameOverOverlays({
   return (
     <>
       {gameStatus === "failed" && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center font-mono">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center ">
           <div className="text-rose-500 text-3xl font-black mb-2 animate-bounce">🚨 SYSTEM LOCKED DOWN</div>
           <div className="text-zinc-400 text-xs mb-6">THE SELF-DESTRUCTION TIME EXPIRED.</div>
           <button
@@ -24,7 +24,7 @@ export default function GameOverOverlays({
       )}
 
       {gameStatus === "completed" && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center font-mono">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center ">
           <div className="text-emerald-400 text-3xl font-black mb-2 animate-pulse">🎉 DECRYPTION SUCCESS</div>
           <div className="text-zinc-300 text-xs mb-6">ALL PASSCODES SECURED. DATA RECOVERY COMPLETE.</div>
           <button
