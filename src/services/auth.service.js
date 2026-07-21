@@ -64,5 +64,13 @@ export const authServices = {
     updateProfile: async (name, avatar) => {
         const res = await api.put('/api/user', { name, avatar });
         return res;
+    },
+    uploadAvatar: async (formData) => {
+        const res = await api.post('/api/user/upload-avatar', formData, {
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        });
+        return res;
     }
 }

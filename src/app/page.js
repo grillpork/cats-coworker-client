@@ -11,6 +11,9 @@ import LeftMenu from "../components/lobby/LeftMenu";
 import RightMenu from "../components/lobby/RightMenu";
 import RoomSelectionModal from "../components/lobby/RoomSelectionModal";
 
+import { authServices } from "../services/auth.service";
+import { characterService } from "../services/character.service";
+
 export default function LobbyPage() {
   const { isAuthenticated, user, fetchUser } = useAuth();
   const router = useRouter();
@@ -24,6 +27,7 @@ export default function LobbyPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [newRoomName, setNewRoomName] = useState("");
   const [creatingRoom, setCreatingRoom] = useState(false);
+  const [availAvatars, setAvailAvatars] = useState([]);
 
   const fetchRooms = async () => {
     try {
@@ -59,12 +63,39 @@ export default function LobbyPage() {
       }
     };
 
+    const loadAvatars = async () => {
+      try {
+        const res = await characterService.getAll();
+        setAvailAvatars(res?.data || res || []);
+      } catch (e) {
+        console.error("Failed to load avatars:", e);
+      }
+    };
+
     fetchTemplates();
     fetchRooms();
+    loadAvatars();
 
     const interval = setInterval(fetchRooms, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  // Listen for keyboard ArrowLeft and ArrowRight key presses to cycle avatars
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        handleCycleAvatar(-1);
+      } else if (e.key === "ArrowRight") {
+        handleCycleAvatar(1);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [availAvatars, user]);
 
   const handleCreateRoom = async (roomName) => {
     if (!isAuthenticated) {
@@ -141,6 +172,34 @@ export default function LobbyPage() {
     }
   };
 
+  const getAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return "/mc-00.png";
+    if (avatarPath.startsWith("http")) return avatarPath;
+    if (avatarPath.startsWith("/uploads/") || avatarPath.startsWith("uploads/")) {
+      return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${avatarPath.startsWith("/") ? "" : "/"}${avatarPath}`;
+    }
+    return avatarPath;
+  };
+
+  const handleCycleAvatar = async (direction) => {
+    if (!availAvatars.length || !user) return;
+    const currentAvatar = user.avatar || "/mc-00.png";
+    let currentIndex = availAvatars.findIndex(a => a.avatarUrl === currentAvatar);
+    if (currentIndex === -1) currentIndex = 0;
+
+    let nextIndex = currentIndex + direction;
+    if (nextIndex < 0) nextIndex = availAvatars.length - 1;
+    if (nextIndex >= availAvatars.length) nextIndex = 0;
+
+    const nextAvatar = availAvatars[nextIndex].avatarUrl;
+    try {
+      await authServices.updateProfile(user.name || user.username || user.email.split('@')[0], nextAvatar);
+      if (fetchUser) await fetchUser();
+    } catch (err) {
+      console.error("Failed to update avatar via carousel:", err);
+    }
+  };
+
   return (
     <main className="relative w-screen h-screen bg-[#80deea] bg-[radial-gradient(circle_at_center,#e0f7fa_0%,#80deea_100%)] text-slate-800 font-sans overflow-hidden flex items-center justify-center select-none">
       {/* Repeating paw-print watermark overlay using low-opacity emoji */}
@@ -168,15 +227,16 @@ export default function LobbyPage() {
                 <div className="absolute bottom-[23%] w-[160px] h-[20px] bg-[#0c3c8c]/50 rounded-full" />
                 <div className="relative z-10 w-[220px] h-[220px] flex items-center justify-center group">
                   <img
-                    src="/mc-00.png"
+                    src={getAvatarUrl(user?.avatar)}
                     alt="Main Character Avatar"
                     className="w-44 h-44 object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.3)] group-hover:scale-110 transition-transform duration-300 select-none pointer-events-none"
+                    onError={(e) => { e.target.src = "/mc-00.png"; }}
                   />
                 </div>
-                <div className="absolute left-[15%] w-10 h-10 bg-white hover:bg-slate-100 rounded-lg flex items-center justify-center font-black border-2 border-[#0d47a1] cursor-pointer shadow-md hover:scale-105 active:scale-95 transition" onClick={() => alert("👈 ฟังก์ชันเปลี่ยนตัวละครหลักเร็วๆ นี้!")}>
+                <div className="absolute left-[15%] w-10 h-10 bg-white hover:bg-slate-100 rounded-lg flex items-center justify-center font-black border-2 border-[#0d47a1] cursor-pointer shadow-md hover:scale-105 active:scale-95 transition" onClick={() => handleCycleAvatar(-1)}>
                   ◀
                 </div>
-                <div className="absolute right-[15%] w-10 h-10 bg-white hover:bg-slate-100 rounded-lg flex items-center justify-center font-black border-2 border-[#0d47a1] cursor-pointer shadow-md hover:scale-105 active:scale-95 transition" onClick={() => alert("👉 ฟังก์ชันเปลี่ยนตัวละครหลักเร็วๆ นี้!")}>
+                <div className="absolute right-[15%] w-10 h-10 bg-white hover:bg-slate-100 rounded-lg flex items-center justify-center font-black border-2 border-[#0d47a1] cursor-pointer shadow-md hover:scale-105 active:scale-95 transition" onClick={() => handleCycleAvatar(1)}>
                   ▶
                 </div>
                 <div className="absolute bottom-[10%] bg-white border-[3px] border-[#0d47a1] rounded-full px-5 py-1.5 shadow-md flex items-center gap-1.5 font-bold text-xs text-[#0d47a1]">

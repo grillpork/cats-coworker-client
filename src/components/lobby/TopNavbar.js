@@ -10,6 +10,7 @@ export default function TopNavbar({ isAuthenticated, user }) {
   const [editName, setEditName] = useState(user?.name || user?.username || "");
   const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || "");
   const [availAvatars, setAvailAvatars] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -156,10 +157,26 @@ export default function TopNavbar({ isAuthenticated, user }) {
                 />
               </div>
 
-              {/* Avatar selection grid */}
+               {/* Avatar selection grid */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">เลือกตัวละครหลัก (Avatar)</label>
                 <div className="grid grid-cols-4 gap-3 max-h-40 overflow-y-auto pr-1">
+                  {/* Custom uploaded avatar */}
+                  {selectedAvatar && (selectedAvatar.startsWith("/uploads/") || selectedAvatar.startsWith("http")) && (
+                    <div 
+                      onClick={() => setSelectedAvatar(selectedAvatar)}
+                      className="aspect-square bg-[#17181c] border-2 rounded-2xl flex items-center justify-center p-2 cursor-pointer transition-all hover:scale-105 border-yellow-450 bg-yellow-500/5 relative"
+                    >
+                      <img 
+                        src={selectedAvatar.startsWith("http") ? selectedAvatar : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${selectedAvatar}`} 
+                        alt="Uploaded Avatar" 
+                        className="w-full h-full object-contain"
+                        onError={(e) => { e.target.src = "/mc-00.png"; }}
+                      />
+                      <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full scale-75">Custom</span>
+                    </div>
+                  )}
+
                   {availAvatars.map((avatar) => {
                     const isSelected = selectedAvatar === avatar.avatarUrl;
                     return (
@@ -179,6 +196,50 @@ export default function TopNavbar({ isAuthenticated, user }) {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Upload Custom Avatar */}
+              <div className="flex flex-col gap-1.5 mt-0.5">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest font-sans">หรืออัปโหลดรูปภาพตัวเอง</label>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    id="avatar-upload" 
+                    className="hidden" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      
+                      const formData = new FormData();
+                      formData.append("avatar", file);
+                      
+                      setIsUploading(true);
+                      try {
+                        const res = await authServices.uploadAvatar(formData);
+                        const uploadedUrl = res.avatarUrl || res.data?.avatarUrl;
+                        if (uploadedUrl) {
+                          setSelectedAvatar(uploadedUrl);
+                          alert("อัปโหลดรูปภาพสำเร็จ!");
+                        }
+                      } catch (err) {
+                        console.error("Avatar upload failed:", err);
+                        alert("อัปโหลดรูปภาพล้มเหลว: " + (err.response?.data?.error || err.message));
+                      } finally {
+                        setIsUploading(false);
+                      }
+                    }}
+                  />
+                  <label 
+                    htmlFor="avatar-upload" 
+                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl cursor-pointer transition-all flex items-center gap-1.5 border border-zinc-750 active:scale-95"
+                  >
+                    {isUploading ? "กำลังอัปโหลด..." : "📁 เลือกไฟล์รูปภาพ"}
+                  </label>
+                  {selectedAvatar && (selectedAvatar.startsWith("/uploads/") || selectedAvatar.startsWith("http")) && (
+                    <span className="text-[9px] text-emerald-450 font-bold">✓ อัปโหลดแล้ว</span>
+                  )}
                 </div>
               </div>
 
